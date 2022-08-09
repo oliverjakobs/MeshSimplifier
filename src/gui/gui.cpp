@@ -10,6 +10,9 @@ void gui_init(GLFWwindow* context, const char* glsl_version)
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
 
+    ImGuiIO& io = ImGui::GetIO();
+    io.WantCaptureMouse = true;
+
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(context, true);
     ImGui_ImplOpenGL3_Init(glsl_version);

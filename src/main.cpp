@@ -9,23 +9,18 @@
 #include "camera.h"
 #include "Mesh.hpp"
 
-
-#include "mathutils/ArcBall.h"
-
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_move_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mod);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window);
 
 // settings
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0,0,0), glm::vec3(0,1,0));
+Camera camera(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0,0,0), glm::vec3(0,1,0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -40,7 +35,7 @@ private:
     IgnisShader shader;
     Mesh* mesh;
 
-
+    bool showWireframe = false;
     bool show_demo_window = true;
 public:
     Application() : GLFWApplication("Application", SCR_WIDTH, SCR_HEIGHT, true)
@@ -48,7 +43,6 @@ public:
         glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
         glfwSetMouseButtonCallback(window, mouse_button_callback);
         glfwSetCursorPosCallback(window, mouse_move_callback);
-        glfwSetScrollCallback(window, scroll_callback);
 
         camera.setScreenSize((float)width, (float)height);
 
@@ -57,9 +51,7 @@ public:
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
         mesh = Mesh::loadObj("res/cube.obj");
-
-        // draw in wireframe
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        //mesh = Mesh::loadObj("res/Marsienne_Base.obj");
     }
 
     ~Application()
@@ -82,6 +74,10 @@ public:
         // don't forget to enable shader before setting uniforms
         ignisUseShader(&shader);
 
+        glm::vec3 lightPos(0.0f, 2.0f, 0.0f);
+        ignisSetUniform3f(&shader, "lightPos", &lightPos[0]);
+        ignisSetUniform3f(&shader, "viewPos", &camera.getPosition()[0]);
+
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
@@ -94,9 +90,20 @@ public:
         model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
         ignisSetUniformMat4(&shader, "model", &model[0][0]);
 
+            // draw in wireframe
+        if (showWireframe)
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        else
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
         mesh->render();
 
         gui_start_frame();
+
+        ImGui::Begin("Info");
+        ImGui::Checkbox("Wireframe", &showWireframe);
+
+        ImGui::End();
 
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
@@ -146,11 +153,4 @@ void mouse_move_callback(GLFWwindow* window, double xposIn, double yposIn)
 
     lastX = xPos;
     lastY = yPos;
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-    // camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }

@@ -84,6 +84,8 @@ public:
         dragging = false;
     }
 
+    glm::vec3 getPosition() const { return eye; }
+
 private:
     glm::mat4x4 viewMat;
     glm::vec3 eye; // Camera position in 3D

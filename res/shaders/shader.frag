@@ -8,7 +8,7 @@ in vec2 TexCoords;
 
 uniform vec3 lightPos; 
 uniform vec3 viewPos; 
-uniform vec3 lightColor;
+uniform vec3 lightColor = vec3(1.0);
 uniform vec3 objectColor = vec3(0.4, 0.4, 0.4);
 
 void main()
