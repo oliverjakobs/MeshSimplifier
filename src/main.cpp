@@ -1,80 +1,81 @@
-#include "imgui.h"
-#include "imgui_impl_glfw.hpp"
-#include "imgui_impl_opengl3.hpp"
-#include <stdio.h>
 
-#include <GLFW/glfw3.h> // Will drag system OpenGL headers
+#include "glfw_app.hpp"
+#include "gui/gui.hpp"
 
-static void glfw_error_callback(int error, const char* description)
+#include "Mesh.hpp"
+
+#include "camera.h"
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+
+class Application : public GLFWApplication
 {
-    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
+private:
+    Mesh* mesh;
+    IgnisShader shader;
 
-int main(int, char**)
-{
-    // Setup window
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
-        return 1;
-
-    // GL 3.0 + GLSL 130
-    const char* glsl_version = "#version 130";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-    // Create window with graphics context
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
-    if (window == NULL)
-        return 1;
-    glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGui::StyleColorsDark();
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-
-    // Our state
     bool show_demo_window = true;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // Main loop
-    while (!glfwWindowShouldClose(window))
+public:
+    Application() : GLFWApplication()
     {
-        glfwPollEvents();
+        gui_init(window, "#version 130");
 
-        // Start the Dear ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+        ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
+
+        mesh = Mesh::loadObj("res/cube.obj");
+
+        glViewport(0, 0, (GLsizei)m_nWidth, (GLsizei)m_nHeight);
+    }
+
+    ~Application()
+    {
+        delete mesh;
+
+        ignisDeleteShader(&shader);
+        gui_shutdown();
+    }
+
+
+    void render()
+    {
+        ignisUseShader(&shader);
+
+        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)m_nWidth / (float)m_nHeight, 0.1f, 100.0f);
+        glm::mat4 view = camera.GetViewMatrix();
+
+        // render the loaded model
+        glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, -10.0f)); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f));	// it's a bit too big for our scene, so scale it down
+
+        ignisSetUniformMat4(&shader, "projection", &projection[0][0]);
+        ignisSetUniformMat4(&shader, "view", &view[0][0]);
+        ignisSetUniformMat4(&shader, "model", &model[0][0]);
+
+
+        mesh->render();
+
+        gui_start_frame();
 
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
+        gui_render();
     }
 
-    // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+};
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+int main(int argc, char* argv[])
+{
+    Application* app = new Application();
 
+    app->run();
+
+    delete app;
     return 0;
 }

@@ -28,8 +28,9 @@ output_dir = "%{cfg.buildcfg}"
 
 group "Packages"
 
-include "packages/imgui.lua"
 include "packages/glfw.lua"
+include "packages/Ignis.lua"
+include "packages/imgui.lua"
 
 group ""
 
@@ -44,6 +45,7 @@ project "Model"
     files
     {
         --Source
+        "src/**.h",
         "src/**.hpp",
         "src/**.cpp",
         --Resources
@@ -54,6 +56,7 @@ project "Model"
     links
     {
         "GLFW",
+        "Ignis",
         "ImGui",
         "opengl32"
     }
@@ -62,7 +65,9 @@ project "Model"
     {
         "src",
         "packages/glfw/include",
-        "packages/imgui"
+        "packages/Ignis/src",
+        "packages/glm/",
+        "packages/imgui",
     }
 
     filter "system:linux"

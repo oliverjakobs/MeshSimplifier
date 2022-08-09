@@ -4,3 +4,9 @@
 [submodule "packages/glfw"]
 	path = packages/glfw
 	url = https://github.com/glfw/glfw
+[submodule "packages/Ignis"]
+	path = packages/Ignis
+	url = https://github.com/oliverjakobs/Ignis
+[submodule "packages/glm"]
+	path = packages/glm
+	url = https://github.com/g-truc/glm
