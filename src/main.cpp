@@ -3,10 +3,12 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "camera.h"
 #include "Mesh.hpp"
+
 
 #include "mathutils/ArcBall.h"
 
@@ -22,7 +24,7 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0,0,0), glm::vec3(0,1,0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -73,14 +75,6 @@ public:
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
 
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-            camera.ProcessKeyboard(FORWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-            camera.ProcessKeyboard(BACKWARD, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-            camera.ProcessKeyboard(LEFT, deltaTime);
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-            camera.ProcessKeyboard(RIGHT, deltaTime);
     }
 
     void render()
@@ -89,7 +83,7 @@ public:
         ignisUseShader(&shader);
 
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)width / (float)height, 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         ignisSetUniformMat4(&shader, "projection", &projection[0][0]);
 
@@ -145,28 +139,51 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 // -------------------------------------------------------
 void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
-    float xpos = static_cast<float>(xposIn);
-    float ypos = static_cast<float>(yposIn);
+    float xPos = static_cast<float>(xposIn);
+    float yPos = static_cast<float>(yposIn);
 
     if (firstMouse)
     {
-        lastX = xpos;
-        lastY = ypos;
+        lastX = xPos;
+        lastY = yPos;
         firstMouse = false;
     }
 
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+    // Get the homogenous position of the camera and pivot point
+    glm::vec4 position(camera.GetEye().x, camera.GetEye().y, camera.GetEye().z, 1);
+    glm::vec4 pivot(camera.GetLookAt().x, camera.GetLookAt().y, camera.GetLookAt().z, 1);
 
-    lastX = xpos;
-    lastY = ypos;
+    // step 1 : Calculate the amount of rotation given the mouse movement.
+    float deltaAngleX = (2 * glm::pi<float>() / SCR_WIDTH); // a movement from left to right = 2*PI = 360 deg
+    float deltaAngleY = (glm::pi<float>() / SCR_HEIGHT);  // a movement from top to bottom = PI = 180 deg
+    float xAngle = (lastX - xPos) * deltaAngleX;
+    float yAngle = (lastY - yPos) * deltaAngleY;
 
-    camera.ProcessMouseMovement(xoffset, yoffset);
+    // Extra step to handle the problem when the camera direction is the same as the up vector
+    float cosAngle = dot(camera.GetViewDir(), camera.GetUpVector());
+    if (cosAngle * glm::sign(deltaAngleY) > 0.99f)
+        deltaAngleY = 0;
+
+    // step 2: Rotate the camera around the pivot point on the first axis.
+    glm::mat4x4 rotationMatrixX(1.0f);
+    rotationMatrixX = glm::rotate(rotationMatrixX, xAngle, camera.GetUpVector());
+    position = (rotationMatrixX * (position - pivot)) + pivot;
+
+    // step 3: Rotate the camera around the pivot point on the second axis.
+    glm::mat4x4 rotationMatrixY(1.0f);
+    rotationMatrixY = glm::rotate(rotationMatrixY, yAngle, camera.GetRightVector());
+    glm::vec3 finalPosition = (rotationMatrixY * (position - pivot)) + pivot;
+
+    // Update the camera view (we keep the same lookat and the same up vector)
+    camera.SetCameraView(finalPosition, camera.GetLookAt(), camera.GetUpVector());
+
+    lastX = xPos;
+    lastY = yPos;
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
+    // camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
