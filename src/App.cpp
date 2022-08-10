@@ -1,4 +1,4 @@
-#include "glfw_app.hpp"
+#include "App.hpp"
 
 #include <stdio.h>
 

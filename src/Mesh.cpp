@@ -17,28 +17,7 @@ Mesh::Mesh(std::vector<Vertex> vertices, std::vector<Triangle> faces)
 		{ GL_FLOAT, 2, GL_FALSE },
 	};
 
-	int size = vertices.size() * 8;
-	float* buffer = new float[size];
-
-	std::vector<Vertex>::iterator vertIt = vertices.begin();
-
-	int vbIndex = 0;
-	while (vertIt != vertices.end()) {
-		Vertex v = (*vertIt);
-
-		buffer[vbIndex++] = v.px;
-		buffer[vbIndex++] = v.py;
-		buffer[vbIndex++] = v.pz;
-		buffer[vbIndex++] = v.u;
-		buffer[vbIndex++] = v.v;
-		buffer[vbIndex++] = v.nx;
-		buffer[vbIndex++] = v.ny;
-		buffer[vbIndex++] = v.nz;
-		vertIt++;
-	}
-
-	ignisAddArrayBufferLayout(&vao, size * sizeof(float), buffer, GL_STATIC_DRAW, 0, layout, 3);
-
+	ignisAddArrayBufferLayout(&vao, vertices.size() * 8 * sizeof(float), vertices.data(), GL_STATIC_DRAW, 0, layout, 3);
 
 	size_t element_count = faces.size() * 3;
 	GLuint* elements = new GLuint[element_count];
