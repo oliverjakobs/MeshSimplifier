@@ -1,7 +1,7 @@
 #include "gui.hpp"
 
-#include "imgui_impl_glfw.hpp"
-#include "imgui_impl_opengl3.hpp"
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
 
 void gui_init(GLFWwindow* context, const char* glsl_version)
 {

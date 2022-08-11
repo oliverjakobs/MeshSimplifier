@@ -5,7 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "gui/gui.hpp"
+#include "Gui.hpp"
 
 #include "Mesh.hpp"
 #include "App.hpp"
@@ -119,7 +119,7 @@ int main()
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-    camera.setScreenSize(width, height);
+    camera.setScreenSize(float(width), float(height));
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mod)

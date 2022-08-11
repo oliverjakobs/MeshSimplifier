@@ -5,7 +5,11 @@ project "ImGui"
     targetdir ("build/bin/" .. output_dir .. "/%{prj.name}")
     objdir ("build/bin-int/" .. output_dir .. "/%{prj.name}")
 
-    includedirs { "imgui/" }
+    includedirs
+    { 
+        "imgui/",
+        "glfw/include"
+    }
 
     files
     {
@@ -20,6 +24,11 @@ project "ImGui"
         "imgui/imgui_draw.cpp",
         "imgui/imgui_tables.cpp",
         "imgui/imgui_widgets.cpp",
+        -- backend
+        "imgui/backends/imgui_impl_glfw.h",
+        "imgui/backends/imgui_impl_glfw.cpp",
+        "imgui/backends/imgui_impl_opengl3.h",
+        "imgui/backends/imgui_impl_opengl3.cpp"
     }
 
     filter "system:windows"

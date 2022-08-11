@@ -96,7 +96,7 @@ Mesh* Mesh::loadObj(const std::string& filename)
 		}
 		else if (c[0].compare("f") == 0)
 		{
-			int numVertices = c.size() - 1;
+			size_t numVertices = c.size() - 1;
 			std::vector<GLuint> indices;
 
 			for (size_t i = 0; i < numVertices; ++i)
@@ -131,11 +131,11 @@ Mesh* Mesh::loadObj(const std::string& filename)
 				indices.push_back(index);
 			}
 
-			unsigned short index0 = indices[0];
-			unsigned short index1 = indices[1];
+			GLuint index0 = indices[0];
+			GLuint index1 = indices[1];
 
-			for (int i = 2; i < numVertices; ++i) {
-				unsigned short index2 = indices[i];
+			for (size_t i = 2; i < numVertices; ++i) {
+				GLuint index2 = indices[i];
 				faces.push_back({ index0, index1, index2 });
 				index1 = index2;
 			}

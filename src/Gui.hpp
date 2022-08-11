@@ -1,8 +1,8 @@
 #pragma once
 
-#include "imgui.h"
+#include <imgui.h>
 
-#include "GLFW/glfw3.h"
+#include <GLFW/glfw3.h>
 
 void gui_init(GLFWwindow* context, const char* glsl_version);
 void gui_shutdown();
