@@ -1,5 +1,3 @@
-
-
 #include <Ignis/Ignis.h>
 #include <GLFW/glfw3.h>
 
@@ -13,11 +11,6 @@
 #include "App.hpp"
 
 #include <camera.h>
-
-#include <iostream>
-
-static void glfwErrorCallback(int error, const char* desc);
-static void ignisErrorCallback(ignisErrorLevel level, const char* desc);
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mod);
@@ -73,7 +66,6 @@ public:
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
-
     }
 
     void render()
@@ -124,12 +116,8 @@ int main()
     return 0;
 }
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    // make sure the viewport matches the new window dimensions; note that width and 
-    // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
     camera.setScreenSize(width, height);
 }
@@ -143,8 +131,6 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mod)
     }
 }
 
-// glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
 void mouse_move_callback(GLFWwindow* window, double xposIn, double yposIn)
 {
     float xPos = static_cast<float>(xposIn);
@@ -154,14 +140,4 @@ void mouse_move_callback(GLFWwindow* window, double xposIn, double yposIn)
 
     lastX = xPos;
     lastY = yPos;
-}
-
-void glfwErrorCallback(int error, const char* desc)
-{
-    printf("[Glfw] %d: %s\n", error, desc);
-}
-
-void ignisErrorCallback(ignisErrorLevel level, const char* desc)
-{
-    printf("%s\n", desc);
 }

@@ -66,14 +66,14 @@ Mesh* Mesh::loadObj(const std::string& filename)
 	std::ifstream stream;
 	stream.open(filename);
 
-	std::vector<Position> positions;
-	std::vector<Normal> normals;
-	std::vector<TexCoord> texCoords;
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec3> normals;
+	std::vector<glm::vec2> texCoords;
 
 	std::vector<Vertex> vertices;
 	std::vector<Triangle> faces;
 
-	std::map<std::string, unsigned short> vertexHashMap;
+	std::map<std::string, GLuint> vertexHashMap;
 
 	std::string line;
 	while (getline(stream, line))
@@ -84,44 +84,47 @@ Mesh* Mesh::loadObj(const std::string& filename)
 
 		if (c[0].compare("v") == 0)
 		{
-			positions.push_back(Position((float)atof(c[1].c_str()), (float)atof(c[2].c_str()), (float)atof(c[3].c_str())));
-		}
-		else if (c[0].compare("vt") == 0)
-		{
-			texCoords.push_back(TexCoord((float)atof(c[1].c_str()), (float)atof(c[2].c_str())));
+			positions.push_back(glm::vec3((float)atof(c[1].c_str()), (float)atof(c[2].c_str()), (float)atof(c[3].c_str())));
 		}
 		else if (c[0].compare("vn") == 0)
 		{
-			normals.push_back(Normal((float)atof(c[1].c_str()), (float)atof(c[2].c_str()), (float)atof(c[3].c_str())));
+			normals.push_back(glm::vec3((float)atof(c[1].c_str()), (float)atof(c[2].c_str()), (float)atof(c[3].c_str())));
+		}
+		else if (c[0].compare("vt") == 0)
+		{
+			texCoords.push_back(glm::vec2((float)atof(c[1].c_str()), (float)atof(c[2].c_str())));
 		}
 		else if (c[0].compare("f") == 0)
 		{
 			int numVertices = c.size() - 1;
-			std::vector<unsigned short> indices;
+			std::vector<GLuint> indices;
 
 			for (size_t i = 0; i < numVertices; ++i)
 			{
-				unsigned short index;
+				GLuint index;
 				std::string vs = c[i + 1];
 
 				// check if the vertex already exists
-				std::map<std::string, unsigned short> ::iterator it = vertexHashMap.find(vs);
-				if (it == vertexHashMap.end()) { // it's a new vertex
-
+				std::map<std::string, GLuint>::iterator it = vertexHashMap.find(vs);
+				if (it == vertexHashMap.end()) // it's a new vertex
+				{
 					std::vector<std::string> indices = splitString(vs, '/');
-					int positionIndex = atoi(indices[0].c_str()) - 1;
-					int texCoordIndex = atoi(indices[1].c_str()) - 1;
-					int normalIndex = atoi(indices[2].c_str()) - 1;
+					int pIndex = atoi(indices[0].c_str()) - 1;
+					int tIndex = atoi(indices[1].c_str()) - 1;
+					int nIndex = atoi(indices[2].c_str()) - 1;
 
-					Vertex vertex(positions[positionIndex], texCoords[texCoordIndex], normals[normalIndex]);
+					Vertex vertex = {
+						positions[pIndex].x, positions[pIndex].y, positions[pIndex].z,
+						normals[nIndex].x,   normals[nIndex].y,   normals[nIndex].z,
+						texCoords[tIndex].x, texCoords[tIndex].y
+					};
 
 					index = vertices.size();
 					vertices.push_back(vertex);
 					vertexHashMap[vs] = index;
-
-
 				}
-				else {
+				else
+				{
 					index = vertexHashMap[vs];
 				}
 
@@ -133,7 +136,7 @@ Mesh* Mesh::loadObj(const std::string& filename)
 
 			for (int i = 2; i < numVertices; ++i) {
 				unsigned short index2 = indices[i];
-				faces.push_back(Triangle(index0, index1, index2));
+				faces.push_back({ index0, index1, index2 });
 				index1 = index2;
 			}
 		}

@@ -3,9 +3,25 @@
 #include <string>
 #include <vector>
 
-#include "VertexStructs.h"
+#include <Ignis/Ignis.h>
+#include <glm/glm.hpp>
 
-#include <Ignis/VertexArray.h>
+struct Vertex
+{
+	float px;
+	float py;
+	float pz;
+	float nx;
+	float ny;
+	float nz;
+	float u;
+	float v;
+};
+
+struct Triangle
+{
+	GLuint i[3];
+};
 
 class Mesh
 {

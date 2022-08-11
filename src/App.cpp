@@ -69,10 +69,5 @@ void glfwErrorCallback(int error, const char* desc)
 
 void ignisErrorCallback(ignisErrorLevel level, const char* desc)
 {
-	switch (level)
-	{
-	case IGNIS_WARN:     printf("%s\n", desc); break;
-	case IGNIS_ERROR:    printf("%s\n", desc); break;
-	case IGNIS_CRITICAL: printf("%s\n", desc); break;
-	}
+	printf("%s\n", desc);
 }
