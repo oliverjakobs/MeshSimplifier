@@ -35,7 +35,6 @@ private:
     IgnisShader shader;
     Mesh* mesh;
 
-
     bool showWireframe = false;
     bool show_demo_window = false;
 public:
@@ -74,7 +73,7 @@ public:
         ignisSetUniform3f(&shader, "lightPos", &camera.getPosition()[0]);
 
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), getAspectRatio(), 0.1f, 100.0f);
         glm::mat4 view = camera.GetViewMatrix();
         ignisSetUniformMat4(&shader, "projection", &projection[0][0]);
         ignisSetUniformMat4(&shader, "view", &view[0][0]);

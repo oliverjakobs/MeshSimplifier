@@ -62,6 +62,8 @@ void GLFWApplication::run()
     }
 }
 
+float GLFWApplication::getAspectRatio() const { return (float)width / (float)height; }
+
 void glfwErrorCallback(int error, const char* desc)
 {
 	printf("[Glfw] %d: %s\n", error, desc);
