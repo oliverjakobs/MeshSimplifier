@@ -21,7 +21,7 @@ const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+Camera camera(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -44,13 +44,14 @@ public:
         glfwSetMouseButtonCallback(window, mouse_button_callback);
         glfwSetCursorPosCallback(window, mouse_move_callback);
 
-        camera.setScreenSize((float)SCR_WIDTH, (float)SCR_HEIGHT);
+        camera.setScreenSize((float)width, (float)height);
 
         gui_init(window, "#version 130");
 
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
-        mesh = Mesh::loadObj("res/cube.obj");
+        // mesh = Mesh::loadObj("res/cube.obj");
+        mesh = Mesh::loadObj("res/teapot.obj");
     }
 
     ~Application()
@@ -98,9 +99,6 @@ public:
 
         ImGui::End();
 
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
-
         gui_render();
     }
 };
@@ -118,7 +116,7 @@ int main()
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
-    camera.setScreenSize(float(width), float(height));
+    camera.setScreenSize((float)width, (float)height);
 }
 
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mod)

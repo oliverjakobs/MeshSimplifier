@@ -23,6 +23,7 @@ struct Triangle
 	GLuint i[3];
 };
 
+
 class Mesh
 {
 private:
