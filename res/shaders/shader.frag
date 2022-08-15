@@ -4,7 +4,6 @@ out vec4 FragColor;
 
 in vec3 Normal;
 in vec3 FragPos;
-in vec2 TexCoords;
 
 uniform vec3 lightPos;
 uniform vec3 lightColor = vec3(1.0);
