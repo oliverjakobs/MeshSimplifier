@@ -29,13 +29,14 @@ Camera camera(cameraPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
-int targetFaces = 3000;
+int targetFaces = 0;
 
 class Application : public GLFWApplication
 {
 private:
     IgnisShader shader;
     Mesh* mesh;
+    MeshSimplification* simplifier;
 
     bool showWireframe = false;
     bool show_demo_window = false;
@@ -52,10 +53,19 @@ public:
 
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
-        MeshData data("res/teapot.obj");
-        //MeshData data("res/cube.obj");
+        //MeshData data("res/monkey.obj");
+        MeshData data("res/box.obj");
 
-        mesh = new Mesh(data.vertices, data.indices);
+        simplifier = new MeshSimplification(data.vertices, data.indices);
+        simplifier->simplfy(8);
+
+        mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
+
+        targetFaces = data.indices.size() / 3;
+        
+        
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
     }
 
     ~Application()
@@ -113,11 +123,9 @@ public:
 
         if (ImGui::Button("Simplify"))
         {
-            /*
-            simplifier->start(targetFaces);
+            simplifier->simplfy(targetFaces);
             delete mesh;
             mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
-            */
         }
 
         ImGui::Separator();

@@ -3,217 +3,162 @@
 #include <algorithm>
 
 MeshSimplification::MeshSimplification(std::vector<glm::vec3> vertices, std::vector<GLuint> indices)
-	: m_vertices(vertices), m_indices(indices)
+	: vertices(vertices), indices(indices)
 {
-	// Init edgeVector.
-	initEdgeVector();
+	createEdges();
+	getVertexNeighbors();
 
-	// Init neighbors multimap.
-	initVertexNeighbor();
+	for (int i = 0; i < vertices.size(); i++)
+		errors.push_back(getQuadricError(i));
 
-	for (int i = 0; i < m_vertices.size(); i++)
-	{
-		m_errors.push_back(calcVertexError(i));
-	}
-	for (int i = 0; i < m_edgeVector.size(); i++)
-	{
-		calcEdgeError(m_edgeVector[i]);
-	}
+	for (auto& edge : edges)
+		setEdgeError(edge);
 
-	buildHeap();
+	std::make_heap(edges.begin(), edges.end(), EdgeComperator());
 }
 
 MeshSimplification::~MeshSimplification()
 {
 }
 
-
-/**
-* @tbrief Check if the 2 given vertices are neigbhors, they are both connected to the same vertex so combine to a triangle.
-*
-* @param second The index of the possible triangle.
-* @param third The index of the possible triangle.
-*/
-bool MeshSimplification::isTriangle(int second, int third)
+void MeshSimplification::simplfy(size_t targetFaces)
 {
-	//second & third already in first
-	auto result = m_vertexNeighbor.equal_range(second);
-	for (auto it = result.first; it != result.second; it++)
+	size_t currFaces = indices.size() / 3;
+	while (currFaces > targetFaces)
 	{
-		if (third == it->second)
+		// remove the edge with the minimal error.
+		std::pop_heap(edges.begin(), edges.end(), EdgeComperator());
+		Edge removedEdge = edges.back();
+		edges.pop_back();
+
+		int newVertex = removedEdge.first;
+		int removedVertex = removedEdge.second;
+
+		// Update the error and position of the new vertex.
+		errors[newVertex] = removedEdge.qMat;
+		vertices[newVertex] = removedEdge.middle;
+
+		// move all of removedVertex's neighbors to newVertex
+		auto range = vertexNeighbors.equal_range(removedVertex);
+		for (auto it = range.first; it != range.second; ++it)
 		{
-			return true;
+			// prevent duplicates
+			bool neighborToBothVertices = false;
+			auto range2 = vertexNeighbors.equal_range(it->second);
+
+			for (auto it2 = range2.first; it2 != range2.second; ++it2)
+			{
+				if (it2->second == newVertex)
+					neighborToBothVertices = true;
+			}
+
+			if (it->second != newVertex && !neighborToBothVertices)
+				vertexNeighbors.insert({ it->second, newVertex });
 		}
+		// erase the removedVertex in the neighbors multimap.
+		vertexNeighbors.erase(removedVertex);
+
+		// update faces
+		updateFaces(newVertex, removedVertex);
+
+		// update edges
+		for (auto& edge : edges)
+		{
+			if (edge.second == removedVertex)
+			{
+				edge.second = newVertex;
+				setEdgeError(edge);
+			}
+			else if (edge.first == removedVertex)
+			{
+				edge.first = newVertex;
+				setEdgeError(edge);
+			}
+		}
+
+		// Reduce the faces count.
+		currFaces = currFaces - 2;
+		std::make_heap(edges.begin(), edges.end(), EdgeComperator());
+	}
+}
+
+void MeshSimplification::createEdges()
+{
+	std::vector<Edge> allEdges;
+	for (size_t i = 0; i < indices.size() - 3;)
+	{
+		uint32_t first = indices[i++];
+		uint32_t second = indices[i++];
+		uint32_t third = indices[i++];
+
+		Edge edge;
+		edge.first = first;
+		edge.second = second;
+
+		allEdges.push_back(edge);
+
+		edge.first = second;
+		edge.second = third;
+
+		allEdges.push_back(edge);
+
+		edge.first = third;
+		edge.second = first;
+
+		allEdges.push_back(edge);
+	}
+
+	for (size_t i = 0; i < allEdges.size(); i++)
+	{
+		bool found = false;
+		for (size_t j = i + 1; j < allEdges.size() && !found; j++)
+		{
+			if (allEdges[i] == allEdges[j]) found = true;
+		}
+
+		if (!found) edges.push_back(allEdges[i]);
+	}
+}
+
+void MeshSimplification::getVertexNeighbors()
+{
+	for (auto& e : edges)
+	{
+		vertexNeighbors.insert({ e.first, e.second });
+		vertexNeighbors.insert({ e.second, e.first });
+	}
+}
+
+bool MeshSimplification::isFace(uint32_t v1, uint32_t v2)
+{
+	auto range = vertexNeighbors.equal_range(v1);
+	for (auto it = range.first; it != range.second; it++)
+	{
+		if (v2 == it->second) return true;
 	}
 	return false;
 }
 
-/**
-* @tbrief Given the indices of the edge being removed, remove the faces that are invalid now.
-*
-* @param firstEdgeInd The first index of the edge being removed.
-* @param secondEdgeInd The second index of the edge being removed.
-*/
-void MeshSimplification::calcFaces(int firstEdgeInd, int secondEdgeInd)
-{
-	unsigned int first, second, third;
-	for (size_t i = 0; i < m_indices.size() - 3; i += 3)
-	{
-		first = m_indices[i];		// First vertex of the current face.
-		second = m_indices[i + 1];	// Second vertex of the current face.
-		third = m_indices[i + 2];	// Third vertex of the current face.
-
-		// If the current face contains the given edge indices.
-		if ((firstEdgeInd == first || firstEdgeInd == second || firstEdgeInd == third)
-			&& (secondEdgeInd == first || secondEdgeInd == second || secondEdgeInd == third))
-		{
-			for (int e = 0; e < m_edgeVector.size(); )
-			{
-				unsigned int currEdgeFirst = m_edgeVector[e].firstVertex;
-				unsigned int currEdgeSecond = m_edgeVector[e].secondVertex;
-
-				// If the current edge is a part of the current face and is not connected to the firstEdgeInd 
-				// then remove it.
-				if ((currEdgeFirst != firstEdgeInd && currEdgeSecond != firstEdgeInd)
-					&& (currEdgeFirst == first || currEdgeFirst == second || currEdgeFirst == third)
-					&& (currEdgeSecond == first || currEdgeSecond == second || currEdgeSecond == third))
-				{
-					m_edgeVector.erase(m_edgeVector.begin() + e);
-				}
-				else
-				{
-					e++;
-				}
-			}
-
-			m_indices.erase(m_indices.begin() + i);
-			m_indices.erase(m_indices.begin() + i + 1);
-			m_indices.erase(m_indices.begin() + i + 2);
-		}
-	}
-
-	// Update m_OBJIndices that all indices that were of the removed index and set to the newly combined vertex.
-	for (auto it = m_indices.begin(); it != m_indices.end(); ++it)
-	{
-		if (*it == secondEdgeInd)
-		{
-			*it = firstEdgeInd;
-		}
-	}
-}
-
-// @tbrief Helper function to remove duplicated edges from the EdgeVector.
-std::vector<Edge> MeshSimplification::removeDups(std::vector<Edge> toRemove)
-{
-	unsigned int i;
-	unsigned int j;
-	std::vector<Edge> noDup;
-	bool found = false;
-	for (i = 0; i < toRemove.size(); i++)
-	{
-		found = false;
-		for (j = i + 1; j < toRemove.size() && !found; j++)
-		{
-			if (toRemove[i] == toRemove[j])
-				found = true;
-		}
-		if (!found)
-			noDup.push_back(toRemove[i]);
-	}
-	return noDup;
-}
-
-// @tbrief Initialize EdgeVector without duplicate Edges.
-void MeshSimplification::initEdgeVector()
-{
-	int counter = 0;
-	unsigned int first;
-	unsigned int second;
-	unsigned int third;
-	for (auto it = m_indices.begin(); it != m_indices.end(); it++)
-	{
-		if (counter == 0)
-			first = *it;
-		if (counter == 1)
-			second = *it;
-		if (counter == 2)
-		{
-			third = *it;
-			counter = 0;
-			struct Edge edge1;
-			struct Edge edge2;
-			struct Edge edge3;
-
-			edge1.firstVertex = first;
-			edge1.secondVertex = second;
-
-			if (first > second)
-			{
-				edge1.firstVertex = second;
-				edge1.secondVertex = first;
-			}
-
-			edge2.firstVertex = first;
-			edge2.secondVertex = third;
-
-			if (first > third)
-			{
-				edge1.firstVertex = third;
-				edge1.secondVertex = first;
-			}
-			edge3.firstVertex = second;
-			edge3.secondVertex = third;
-
-			if (second > third)
-			{
-				edge1.firstVertex = third;
-				edge1.secondVertex = second;
-			}
-			m_edgeVector.push_back(edge1);
-			m_edgeVector.push_back(edge2);
-			m_edgeVector.push_back(edge3);
-			continue;
-		}
-		counter++;
-	}
-	m_edgeVector = removeDups(m_edgeVector);
-}
-
-// @tbrief Initialize m_vertexNeighbor multimap.
-void  MeshSimplification::initVertexNeighbor()
-{
-	for (size_t i = 0; i < m_vertices.size(); i++)
-	{
-		for (size_t j = 0; j < m_edgeVector.size(); j++)
-		{
-			if (i == m_edgeVector[j].firstVertex)
-				m_vertexNeighbor.insert(std::pair<int, int>(i, m_edgeVector[j].secondVertex));
-			if (i == m_edgeVector[j].secondVertex)
-				m_vertexNeighbor.insert(std::pair<int, int>(i, m_edgeVector[j].firstVertex));
-		}
-	}
-}
-
-// @tbrief calculates the Quadric Error of a vertex
-glm::mat4 MeshSimplification::calcVertexError(int vertexIndex)
+glm::mat4 MeshSimplification::getQuadricError(uint32_t vertex)
 {
 	glm::mat4 qMat(1.0f);
-	auto result = m_vertexNeighbor.equal_range(vertexIndex);
+	auto range = vertexNeighbors.equal_range(vertex);
+
 	// Find all the triangles of this vertex and add it's error to it.
-	for (auto it = result.first; it != result.second; it++)
+	for (auto v1 = range.first; v1 != range.second; v1++)
 	{
-		for (auto it2 = it; it2 != result.second; it2++)
+		for (auto v2 = v1; v2 != range.second; v2++)
 		{
-			if (it2->second != it->second)
+			if (v1->second != v2->second)
 			{
 				// Up until here we check if the 3 indexes creates a triangle.
-				if (isTriangle(it->second, it2->second))
+				if (isFace(v1->second, v2->second))
 				{
 					// Calc cross prod.
-					glm::vec3 n = glm::cross(m_vertices[it2->second] - m_vertices[vertexIndex], m_vertices[it->second] - m_vertices[vertexIndex]);
+					glm::vec3 n = glm::cross(vertices[v2->second]-vertices[vertex], vertices[v1->second]-vertices[vertex]);
 					n = glm::normalize(n);
 
-					glm::vec4 v_tag = glm::vec4(n, -(dot(m_vertices[vertexIndex], n)));
+					glm::vec4 v_tag = glm::vec4(n, -(glm::dot(vertices[vertex], n)));
 					for (int i = 0; i < 4; i++)
 					{
 						for (int j = 0; j < 4; j++)
@@ -228,114 +173,88 @@ glm::mat4 MeshSimplification::calcVertexError(int vertexIndex)
 	return qMat;
 }
 
-void MeshSimplification::buildHeap()
+void MeshSimplification::setEdgeError(Edge& edge)
 {
-	std::make_heap(m_edgeVector.begin(), m_edgeVector.end(), compEdgeErr());
-}
-
-// @tbrief Calculate the given error of this edge.
-void MeshSimplification::calcEdgeError(struct Edge& e)
-{
-	e.edgeQ = m_errors[e.firstVertex] + m_errors[e.secondVertex];
+	edge.qMat = errors[edge.first] + errors[edge.second];
 
 	// calc new position in the middle
-	glm::vec4 midVec = glm::vec4((m_vertices[e.firstVertex] + m_vertices[e.secondVertex]) / 2.0f, 1.0);
-	e.newPos = glm::vec3(midVec);
+	glm::vec4 middle = glm::vec4((vertices[edge.first] + vertices[edge.second]) / 2.0f, 1.0);
+	edge.middle = glm::vec3(middle);
 
-	// temp is a row vector
-	glm::vec4 temp = e.edgeQ * midVec;
-	e.edgeError = glm::dot(midVec, temp);
+	edge.error = glm::dot(middle, edge.qMat * middle);
 }
 
-//  @tbrief The simplification algorithm.
-void MeshSimplification::start(int targetFaces)
+void MeshSimplification::updateFaces(uint32_t firstIndex, uint32_t secondIndex)
 {
-	int currFaces = m_indices.size() / 3;
-
-	while (currFaces > targetFaces)
+	unsigned int first, second, third;
+	for (size_t i = 0; i < indices.size() - 3; i += 3)
 	{
-		// Get the edge to remove.
-		std::pop_heap(m_edgeVector.begin(), m_edgeVector.end(), compEdgeErr());
+		first = indices[i];		// First vertex of the current face.
+		second = indices[i + 1];	// Second vertex of the current face.
+		third = indices[i + 2];	// Third vertex of the current face.
 
-		Edge removedEdge = m_edgeVector.back();
-		int newVertex = removedEdge.firstVertex;
-		int removedVertex = removedEdge.secondVertex;
-
-		// Update the errors and position of the newly set vertex.
-		m_errors[newVertex] = removedEdge.edgeQ;
-		m_vertices[newVertex] = removedEdge.newPos;
-
-		// Get all the neighbors of the vertex we're removing (secondVertexInd).
-		// Insert into every one of them the combined vertex (secondVertexInd) unless it already had it.
-		// Notice we don't remove the removed vertex from the neighbors since it's not valid to erase while 
-		// iterating inside an iterator without creating a copy of the original multimap and this doesn't 
-		// effect correctness.
-		bool neighborToBothVertices = false;
-		auto ret = m_vertexNeighbor.equal_range(removedVertex);
-		for (auto it = ret.first; it != ret.second; ++it)
+		// If the current face contains the given edge indices.
+		if ((firstIndex == first || firstIndex == second || firstIndex == third)
+			&& (secondIndex == first || secondIndex == second || secondIndex == third))
 		{
-			neighborToBothVertices = false;
-			auto neighbor = m_vertexNeighbor.equal_range(it->second);
-
-			for (auto it2 = neighbor.first; it2 != neighbor.second; ++it2)
+			for (int e = 0; e < edges.size(); )
 			{
-				// This neighbor contained both firstVertexInd and secondVertexInd, so after the loop don't 
-				// add to it the firstVertexInd.
-				if (it2->second == newVertex)
+				unsigned int currEdgeFirst = edges[e].first;
+				unsigned int currEdgeSecond = edges[e].second;
+
+				// If the current edge is a part of the current face and is not connected to the firstEdgeInd 
+				// then remove it.
+				if ((currEdgeFirst != firstIndex && currEdgeSecond != firstIndex)
+					&& (currEdgeFirst == first || currEdgeFirst == second || currEdgeFirst == third)
+					&& (currEdgeSecond == first || currEdgeSecond == second || currEdgeSecond == third))
 				{
-					neighborToBothVertices = true;
+					edges.erase(edges.begin() + e);
+				}
+				else
+				{
+					e++;
 				}
 			}
 
-			if (it->second != newVertex && !neighborToBothVertices)
-			{
-				m_vertexNeighbor.insert(std::pair<int, int>(it->second, newVertex));
-			}
+			indices.erase(indices.begin() + i);
+			indices.erase(indices.begin() + i + 1);
+			indices.erase(indices.begin() + i + 2);
 		}
+	}
 
-		// Removes the edge with the minimal error.
-		m_edgeVector.pop_back();
-
-		// Reduce the faces count.
-		currFaces = currFaces - 2;
-
-		// Removing the deleted vertex in the neighbors multimap.
-		m_vertexNeighbor.erase(removedVertex);
-
-		// Calculate new faces now without the removed edge.
-		calcFaces(newVertex, removedVertex);
-
-		// Updating m_edgeVector, so any edge that was connected to the removed edge has it's error 
-		// recalculated and is only connected to the remaining vertex.
-		for (int i = 0; i < m_edgeVector.size(); i++)
+	// Update m_OBJIndices that all indices that were of the removed index and set to the newly combined vertex.
+	for (auto it = indices.begin(); it != indices.end(); ++it)
+	{
+		if (*it == secondIndex)
 		{
-			if (m_edgeVector[i].secondVertex == removedVertex)
-			{
-				m_edgeVector[i].secondVertex = newVertex;
-			}
-
-			else if (m_edgeVector[i].firstVertex == removedVertex)
-			{
-				m_edgeVector[i].firstVertex = newVertex;
-			}
-
-			if (m_edgeVector[i].firstVertex == newVertex || m_edgeVector[i].secondVertex == newVertex)
-			{
-				calcEdgeError(m_edgeVector[i]);
-			}
+			*it = firstIndex;
 		}
-
-		// Rebuild the heap with the updated edge errors.
-		buildHeap();
 	}
 }
 
-std::vector<glm::vec3> MeshSimplification::getVertices()
+// @tbrief Prints vector of Edges.
+void MeshSimplification::printEdges()
 {
-	return m_vertices;
+	printf("Edges: (%zd)\n", edges.size());
+	for (auto& e : edges)
+	{
+		printf(" - (%d, %d) error=%f\n", e.first, e.second, e.error);
+	}
+
 }
 
-std::vector<GLuint> MeshSimplification::getIndices()
+void MeshSimplification::printNeighbors()
 {
-	return m_indices;
+	printf("Neighbors:\n");
+
+	for (size_t i = 0; i < vertices.size(); ++i)
+	{
+		printf(" - %zd: ", i);
+		auto range = vertexNeighbors.equal_range(i);
+		for (auto it = range.first; it != range.second; ++it)
+		{
+			printf("%d ", it->second);
+		}
+		printf("\n");
+	}
 }
