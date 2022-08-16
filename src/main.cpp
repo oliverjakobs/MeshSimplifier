@@ -8,9 +8,10 @@
 #include "Gui.hpp"
 
 #include "Mesh.hpp"
+#include "MeshSimplifier.hpp"
 #include "App.hpp"
 
-#include <camera.h>
+#include "Camera.hpp"
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mod);
@@ -20,14 +21,15 @@ void mouse_move_callback(GLFWwindow* window, double xpos, double ypos);
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
+glm::vec3 cameraPosition(0.0f, 0.0f, 10.0f);
+glm::vec3 objectPosition(0.0f);
+
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+Camera camera(cameraPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
-bool firstMouse = true;
 
-// lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+int targetFaces = 3000;
 
 class Application : public GLFWApplication
 {
@@ -50,13 +52,16 @@ public:
 
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
-        // mesh = Mesh::loadObj("res/cube.obj");
-        mesh = Mesh::loadObj("res/teapot.obj");
+        MeshData data("res/teapot.obj");
+        //MeshData data("res/cube.obj");
+
+        mesh = new Mesh(data.vertices, data.indices);
     }
 
     ~Application()
     {
         delete mesh;
+
         ignisDeleteShader(&shader);
 
         gui_shutdown();
@@ -81,6 +86,7 @@ public:
 
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
+        model = glm::translate(model, objectPosition);
         ignisSetUniformMat4(&shader, "model", &model[0][0]);
 
         // draw in wireframe
@@ -95,6 +101,29 @@ public:
         gui_start_frame();
 
         ImGui::Begin("Info");
+
+        ImGui::Text("Mesh info:");
+        ImGui::Text("Vertices: %d", mesh->getVertexCount());
+        ImGui::Text("Faces:    %d", mesh->getFaceCount());
+        ImGui::Separator();
+
+        ImGui::Text("Simplifier:");
+
+        ImGui::SliderInt("Target Faces", &targetFaces, 0, mesh->getFaceCount());
+
+        if (ImGui::Button("Simplify"))
+        {
+            /*
+            simplifier->start(targetFaces);
+            delete mesh;
+            mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
+            */
+        }
+
+        ImGui::Separator();
+
+        ImGui::Text("Render settings:");
+
         ImGui::Checkbox("Wireframe", &showWireframe);
 
         ImGui::End();

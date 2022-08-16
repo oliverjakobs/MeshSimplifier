@@ -8,21 +8,24 @@
 
 struct Vertex
 {
-	float px;
-	float py;
-	float pz;
-	float nx;
-	float ny;
-	float nz;
-	float u;
-	float v;
+	float px, py, pz;
+	float nx, ny, nz;
 };
 
-struct Triangle
+struct HalfEdge
 {
-	GLuint i[3];
+    uint32_t vert;
+    uint32_t twin;
 };
 
+struct MeshData
+{
+    std::vector<glm::vec3> vertices;
+    std::vector<GLuint> indices;
+
+    MeshData(const std::string& filename);
+    ~MeshData();
+};
 
 class Mesh
 {
@@ -30,15 +33,16 @@ private:
     IgnisVertexArray vao;
 
     std::vector<Vertex> vertices;
-    std::vector<Triangle> faces;
+    std::vector<GLuint> indices;
 
 public:
-    Mesh(std::vector<Vertex> vertices, std::vector<Triangle> faces);
+    Mesh(std::vector<glm::vec3> vertices, std::vector<GLuint> indices);
     ~Mesh();
 
     void render();
 
-    static Mesh* loadObj(const std::string& filename);
+    size_t getVertexCount() const { return vertices.size(); }
+    size_t getFaceCount() const   { return indices.size() / 3; }
 };
 
 

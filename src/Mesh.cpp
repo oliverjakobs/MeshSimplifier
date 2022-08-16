@@ -5,191 +5,123 @@
 #include <sstream>
 #include <map>
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<Triangle> faces)
-	: vertices(vertices), faces(faces)
+Mesh::Mesh(std::vector<glm::vec3> positions, std::vector<GLuint> indices)
+    : indices(indices)
 {
-	ignisGenerateVertexArray(&vao);
+    ignisGenerateVertexArray(&vao);
 
-	// calc and apply face normals
-	for (auto& face : faces)
-	{
-		Vertex v0 = vertices[face.i[0]];
-		Vertex v1 = vertices[face.i[1]];
-		Vertex v2 = vertices[face.i[2]];
+    for (auto p : positions)
+    {
+        vertices.push_back({ p.x,p.y,p.z });
+    }
 
-		glm::vec3 p0 = glm::vec3(v0.px, v0.py, v0.pz);
-		glm::vec3 p1 = glm::vec3(v1.px, v1.py, v1.pz);
-		glm::vec3 p2 = glm::vec3(v2.px, v2.py, v2.pz);
+    // calc and apply face normals
+    for (size_t i = 0; i < indices.size() - 3; i += 3)
+    {
+        glm::vec3 p0 = positions[indices[i + 0]];
+        glm::vec3 p1 = positions[indices[i + 1]];
+        glm::vec3 p2 = positions[indices[i + 2]];
 
-		glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
+        glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
 
-		if (glm::length(normal) != 0.0f)
-			normal = glm::normalize(normal);
+        if (glm::length(normal) != 0.0f)
+            normal = glm::normalize(normal);
 
-		vertices[face.i[0]].nx = normal.x;
-		vertices[face.i[0]].ny = normal.y;
-		vertices[face.i[0]].nz = normal.z;
+        vertices[indices[i + 0]].nx = normal.x;
+        vertices[indices[i + 0]].ny = normal.y;
+        vertices[indices[i + 0]].nz = normal.z;
 
-		vertices[face.i[1]].nx = normal.x;
-		vertices[face.i[1]].ny = normal.y;
-		vertices[face.i[1]].nz = normal.z;
+        vertices[indices[i + 1]].nx = normal.x;
+        vertices[indices[i + 1]].ny = normal.y;
+        vertices[indices[i + 1]].nz = normal.z;
 
-		vertices[face.i[2]].nx = normal.x;
-		vertices[face.i[2]].ny = normal.y;
-		vertices[face.i[2]].nz = normal.z;
-	}
+        vertices[indices[i + 2]].nx = normal.x;
+        vertices[indices[i + 2]].ny = normal.y;
+        vertices[indices[i + 2]].nz = normal.z;
+    }
 
-	// create vertex buffer
-	IgnisBufferElement layout[] =
-	{
-		{ GL_FLOAT, 3, GL_FALSE },
-		{ GL_FLOAT, 3, GL_FALSE },
-		{ GL_FLOAT, 2, GL_FALSE },
-	};
+    // create vertex buffer
+    IgnisBufferElement layout[] =
+    {
+        { GL_FLOAT, 3, GL_FALSE },
+        { GL_FLOAT, 3, GL_FALSE },
+    };
 
-	ignisAddArrayBufferLayout(&vao, vertices.size() * 8 * sizeof(float), vertices.data(), GL_STATIC_DRAW, 0, layout, 3);
+    ignisAddArrayBufferLayout(&vao, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW, 0, layout, 2);
 
-	// create element buffer
-	size_t element_count = faces.size() * 3;
-	GLuint* elements = new GLuint[element_count];
-	std::vector<Triangle>::iterator elemIt = faces.begin();
-
-	int ibIndex = 0;
-	while (elemIt != faces.end()) {
-		Triangle f = (*elemIt);
-
-		elements[ibIndex++] = f.i[0];
-		elements[ibIndex++] = f.i[1];
-		elements[ibIndex++] = f.i[2];
-		elemIt++;
-	}
-
-	ignisLoadElementBuffer(&vao, elements, element_count, GL_STATIC_DRAW);
-
-	delete[] elements;
+    // create element buffer
+    ignisLoadElementBuffer(&vao, indices.data(), indices.size(), GL_STATIC_DRAW);
 }
 
 Mesh::~Mesh()
 {
-	ignisDeleteVertexArray(&vao);
+    ignisDeleteVertexArray(&vao);
 }
 
 void Mesh::render()
 {
-	ignisBindVertexArray(&vao);
-	glDrawElements(GL_TRIANGLES, vao.element_count, GL_UNSIGNED_INT, 0);
+    ignisBindVertexArray(&vao);
+    glDrawElements(GL_TRIANGLES, vao.element_count, GL_UNSIGNED_INT, 0);
 }
 
 static std::vector<std::string> splitString(std::string& str, char delimiter)
 {
-	std::vector<std::string> words;
-	std::string word;
-	std::stringstream stream(str);
+    std::vector<std::string> words;
+    std::string word;
+    std::stringstream stream(str);
 
-	while (getline(stream, word, delimiter))
-		words.push_back(word);
+    while (getline(stream, word, delimiter))
+        words.push_back(word);
 
-	return words;
+    return words;
 }
 
-Mesh* Mesh::loadObj(const std::string& filename)
+MeshData::MeshData(const std::string& filename)
 {
-	std::ifstream stream;
-	stream.open(filename);
+    std::ifstream stream;
+    stream.open(filename);
 
-	std::vector<glm::vec3> positions;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec2> texCoords;
+    std::string line;
+    while (getline(stream, line))
+    {
+        std::vector<std::string> c = splitString(line, ' ');
 
-	std::vector<Vertex> vertices;
-	std::vector<Triangle> faces;
+        if (c.size() == 0) continue;
 
-	std::map<std::string, GLuint> vertexHashMap;
+        if (c[0].compare("v") == 0)
+        {
+            vertices.push_back(glm::vec3(std::stof(c[1]), std::stof(c[2]), std::stof(c[3])));
+        }
+        else if (c[0].compare("f") == 0)
+        {
+            size_t numVertices = c.size() - 1;
+            std::vector<GLuint> faceIndices;
 
-	std::string line;
-	while (getline(stream, line))
-	{
-		std::vector<std::string> c = splitString(line, ' ');
+            for (size_t i = 0; i < numVertices; ++i)
+            {
+                GLuint index = std::stoi(splitString(c[i + 1], '/')[0]) - 1;
+                faceIndices.push_back(index);
+            }
 
-		if (c.size() == 0) continue;
+            GLuint index0 = faceIndices[0];
+            GLuint index1 = faceIndices[1];
 
-		if (c[0].compare("v") == 0)
-		{
-			positions.push_back(glm::vec3((float)atof(c[1].c_str()), (float)atof(c[2].c_str()), (float)atof(c[3].c_str())));
-		}
-		else if (c[0].compare("vn") == 0)
-		{
-			normals.push_back(glm::vec3((float)atof(c[1].c_str()), (float)atof(c[2].c_str()), (float)atof(c[3].c_str())));
-		}
-		else if (c[0].compare("vt") == 0)
-		{
-			texCoords.push_back(glm::vec2((float)atof(c[1].c_str()), (float)atof(c[2].c_str())));
-		}
-		else if (c[0].compare("f") == 0)
-		{
-			size_t numVertices = c.size() - 1;
-			std::vector<GLuint> indices;
+            for (size_t i = 2; i < numVertices; ++i) {
+                GLuint index2 = faceIndices[i];
 
-			for (size_t i = 0; i < numVertices; ++i)
-			{
-				GLuint index;
-				std::string vs = c[i + 1];
+                indices.push_back(index0);
+                indices.push_back(index1);
+                indices.push_back(index2);
 
-				// check if the vertex already exists
-				std::map<std::string, GLuint>::iterator it = vertexHashMap.find(vs);
-				if (it == vertexHashMap.end()) // it's a new vertex
-				{
-					std::vector<std::string> indices = splitString(vs, '/');
-					int pIndex = atoi(indices[0].c_str()) - 1;
+                index1 = index2;
+            }
+        }
+    }
 
-					Vertex vertex = { positions[pIndex].x, positions[pIndex].y, positions[pIndex].z };
+    printf("Loaded OBJ model \"%s\" ", filename.c_str());
+    printf("with %zd vertices and %zd faces.\n", vertices.size(), indices.size() / 3);
+}
 
-					if (indices.size() > 1)
-					{
-						int tIndex = atoi(indices[1].c_str()) - 1;
-
-						vertex.u = texCoords[tIndex].x;
-						vertex.v = texCoords[tIndex].y;
-					}
-					/*
-					if (indices.size() > 2)
-					{
-						int nIndex = atoi(indices[2].c_str()) - 1;
-
-						vertex.nx = normals[nIndex].x;
-						vertex.ny = normals[nIndex].y;
-						vertex.nz = normals[nIndex].z;
-					}
-					*/
-
-					index = vertices.size();
-					vertices.push_back(vertex);
-					vertexHashMap[vs] = index;
-				}
-				else
-				{
-					index = vertexHashMap[vs];
-				}
-
-				indices.push_back(index);
-			}
-
-			GLuint index0 = indices[0];
-			GLuint index1 = indices[1];
-
-			for (size_t i = 2; i < numVertices; ++i) {
-				GLuint index2 = indices[i];
-				faces.push_back({ index0, index1, index2 });
-				index1 = index2;
-			}
-		}
-	}
-
-	std::cout << "Found " << positions.size() << " vertex positions\n";
-	std::cout << "Found " << texCoords.size() << " texture coordinates\n";
-	std::cout << "Found " << normals.size() << " normal vectors\n";
-	std::cout << "Created " << vertices.size() << " unique vertices\n";
-	std::cout << "Created " << faces.size() << " triangular faces\n";
-
-    return new Mesh(vertices, faces);
+MeshData::~MeshData()
+{
 }
