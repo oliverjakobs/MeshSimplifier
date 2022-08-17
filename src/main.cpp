@@ -29,7 +29,6 @@ Camera camera(cameraPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
-int targetFaces = 0;
 
 class Application : public GLFWApplication
 {
@@ -40,7 +39,7 @@ private:
 
     bool showWireframe = false;
     bool cullBackFaces = false;
-    bool show_demo_window = false;
+    int targetFaces = 0;
 public:
     Application() : GLFWApplication("Application", SCR_WIDTH, SCR_HEIGHT, true)
     {
@@ -61,7 +60,7 @@ public:
 
         mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
 
-        targetFaces = mesh->getFaceCount();
+        targetFaces = simplifier->getFaceCount();
     }
 
     ~Application()
@@ -119,19 +118,18 @@ public:
         ImGui::Begin("Info");
 
         ImGui::Text("Mesh info:");
-        ImGui::Text("Vertices: %d", mesh->getVertexCount());
-        ImGui::Text("Faces:    %d", mesh->getFaceCount());
+        ImGui::Text("Vertices: %d", simplifier->getVertexCount());
+        ImGui::Text("Faces:    %d", simplifier->getFaceCount());
         ImGui::Separator();
 
         ImGui::Text("Simplifier:");
 
-        ImGui::SliderInt("Target Faces", &targetFaces, 0, mesh->getFaceCount());
+        ImGui::SliderInt("Target Faces", &targetFaces, 0, simplifier->getFaceCount());
 
         if (ImGui::Button("Simplify"))
         {
             simplifier->run(targetFaces);
-            delete mesh;
-            mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
+            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
         }
 
         ImGui::Separator();
