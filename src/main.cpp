@@ -21,7 +21,7 @@ void mouse_move_callback(GLFWwindow* window, double xpos, double ypos);
 const unsigned int SCR_WIDTH = 1280;
 const unsigned int SCR_HEIGHT = 720;
 
-glm::vec3 cameraPosition(0.0f, 0.0f, 10.0f);
+glm::vec3 cameraPosition(0.0f, 0.0f, 5.0f);
 glm::vec3 objectPosition(0.0f);
 
 // camera
@@ -54,7 +54,7 @@ public:
 
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
-        MeshData data("res/sphere.obj");
+        MeshData data("res/monkey.obj");
         //MeshData data("res/box.obj");
 
         simplifier = new MeshSimplifier(data.vertices, data.indices);
@@ -62,9 +62,6 @@ public:
         mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
 
         targetFaces = mesh->getFaceCount();
-
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
     }
 
     ~Application()

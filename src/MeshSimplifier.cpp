@@ -74,19 +74,17 @@ void MeshSimplifier::run(size_t targetFaces)
 		// update faces
 		updateFaces(newVertex, removedVertex);
 
-		// update edges
+		// Update edges, so any edge that was connected to the removed edge has it's error recalculated 
+		// and is only connected to the remaining vertex.
 		for (auto& edge : edges)
 		{
 			if (edge.second == removedVertex)
-			{
 				edge.second = newVertex;
-				setEdgeError(edge);
-			}
 			else if (edge.first == removedVertex)
-			{
 				edge.first = newVertex;
+
+			if (edge.first == newVertex || edge.second == newVertex)
 				setEdgeError(edge);
-			}
 		}
 		
 		// Reduce the faces count.
