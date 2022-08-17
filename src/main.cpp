@@ -36,9 +36,10 @@ class Application : public GLFWApplication
 private:
     IgnisShader shader;
     Mesh* mesh;
-    MeshSimplification* simplifier;
+    MeshSimplifier* simplifier;
 
     bool showWireframe = false;
+    bool cullBackFaces = false;
     bool show_demo_window = false;
 public:
     Application() : GLFWApplication("Application", SCR_WIDTH, SCR_HEIGHT, true)
@@ -53,17 +54,15 @@ public:
 
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
-        //MeshData data("res/monkey.obj");
-        MeshData data("res/box.obj");
+        MeshData data("res/sphere.obj");
+        //MeshData data("res/box.obj");
 
-        simplifier = new MeshSimplification(data.vertices, data.indices);
-        simplifier->simplfy(8);
+        simplifier = new MeshSimplifier(data.vertices, data.indices);
 
         mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
 
-        targetFaces = data.indices.size() / 3;
-        
-        
+        targetFaces = mesh->getFaceCount();
+
         glEnable(GL_CULL_FACE);
         glCullFace(GL_BACK);
     }
@@ -105,6 +104,16 @@ public:
         else
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+        if (cullBackFaces)
+        {
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_BACK);
+        }
+        else
+        {
+            glDisable(GL_CULL_FACE);
+        }
+
         // render the cube
         mesh->render();
 
@@ -123,7 +132,7 @@ public:
 
         if (ImGui::Button("Simplify"))
         {
-            simplifier->simplfy(targetFaces);
+            simplifier->run(targetFaces);
             delete mesh;
             mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
         }
@@ -133,6 +142,7 @@ public:
         ImGui::Text("Render settings:");
 
         ImGui::Checkbox("Wireframe", &showWireframe);
+        ImGui::Checkbox("Cull Backfaces", &cullBackFaces);
 
         ImGui::End();
 

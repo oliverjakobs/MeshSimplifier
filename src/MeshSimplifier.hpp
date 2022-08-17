@@ -29,7 +29,7 @@ struct EdgeComperator
 	}
 };
 
-class MeshSimplification
+class MeshSimplifier
 {
 private:
 	std::vector<GLuint> indices;
@@ -40,16 +40,17 @@ private:
 	std::multimap<int, int> vertexNeighbors;
 
 public:
-	MeshSimplification(std::vector<glm::vec3> vertices, std::vector<GLuint> indices);
-	~MeshSimplification();
+	MeshSimplifier(std::vector<glm::vec3> vertices, std::vector<GLuint> indices);
+	~MeshSimplifier();
 
-	void simplfy(size_t targetFaces);
+	void run(size_t targetFaces);
 	
 	std::vector<glm::vec3> getVertices() const { return vertices; }
 	std::vector<GLuint> getIndices() const { return indices; }
 
 	void printEdges();
 	void printNeighbors();
+	void printFaces();
 
 private:
 	void createEdges();

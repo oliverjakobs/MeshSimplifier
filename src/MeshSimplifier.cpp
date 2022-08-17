@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-MeshSimplification::MeshSimplification(std::vector<glm::vec3> vertices, std::vector<GLuint> indices)
+MeshSimplifier::MeshSimplifier(std::vector<glm::vec3> vertices, std::vector<GLuint> indices)
 	: vertices(vertices), indices(indices)
 {
 	createEdges();
@@ -17,11 +17,23 @@ MeshSimplification::MeshSimplification(std::vector<glm::vec3> vertices, std::vec
 	std::make_heap(edges.begin(), edges.end(), EdgeComperator());
 }
 
-MeshSimplification::~MeshSimplification()
+MeshSimplifier::~MeshSimplifier()
 {
 }
 
-void MeshSimplification::simplfy(size_t targetFaces)
+void multimapEraseValue(std::multimap<int, int>& mmap, uint32_t value)
+{
+	mmap.erase(value);
+	for (auto iter = mmap.begin(); iter != mmap.end();)
+	{
+		if (iter->second == value)
+			iter = mmap.erase(iter);
+		else
+			++iter;
+	}
+}
+
+void MeshSimplifier::run(size_t targetFaces)
 {
 	size_t currFaces = indices.size() / 3;
 	while (currFaces > targetFaces)
@@ -55,8 +67,9 @@ void MeshSimplification::simplfy(size_t targetFaces)
 			if (it->second != newVertex && !neighborToBothVertices)
 				vertexNeighbors.insert({ it->second, newVertex });
 		}
+
 		// erase the removedVertex in the neighbors multimap.
-		vertexNeighbors.erase(removedVertex);
+		multimapEraseValue(vertexNeighbors, removedVertex);
 
 		// update faces
 		updateFaces(newVertex, removedVertex);
@@ -75,14 +88,14 @@ void MeshSimplification::simplfy(size_t targetFaces)
 				setEdgeError(edge);
 			}
 		}
-
+		
 		// Reduce the faces count.
 		currFaces = currFaces - 2;
 		std::make_heap(edges.begin(), edges.end(), EdgeComperator());
 	}
 }
 
-void MeshSimplification::createEdges()
+void MeshSimplifier::createEdges()
 {
 	std::vector<Edge> allEdges;
 	for (size_t i = 0; i < indices.size() - 3;)
@@ -120,7 +133,7 @@ void MeshSimplification::createEdges()
 	}
 }
 
-void MeshSimplification::getVertexNeighbors()
+void MeshSimplifier::getVertexNeighbors()
 {
 	for (auto& e : edges)
 	{
@@ -129,7 +142,7 @@ void MeshSimplification::getVertexNeighbors()
 	}
 }
 
-bool MeshSimplification::isFace(uint32_t v1, uint32_t v2)
+bool MeshSimplifier::isFace(uint32_t v1, uint32_t v2)
 {
 	auto range = vertexNeighbors.equal_range(v1);
 	for (auto it = range.first; it != range.second; it++)
@@ -139,7 +152,7 @@ bool MeshSimplification::isFace(uint32_t v1, uint32_t v2)
 	return false;
 }
 
-glm::mat4 MeshSimplification::getQuadricError(uint32_t vertex)
+glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
 {
 	glm::mat4 qMat(1.0f);
 	auto range = vertexNeighbors.equal_range(vertex);
@@ -173,7 +186,7 @@ glm::mat4 MeshSimplification::getQuadricError(uint32_t vertex)
 	return qMat;
 }
 
-void MeshSimplification::setEdgeError(Edge& edge)
+void MeshSimplifier::setEdgeError(Edge& edge)
 {
 	edge.qMat = errors[edge.first] + errors[edge.second];
 
@@ -184,77 +197,75 @@ void MeshSimplification::setEdgeError(Edge& edge)
 	edge.error = glm::dot(middle, edge.qMat * middle);
 }
 
-void MeshSimplification::updateFaces(uint32_t firstIndex, uint32_t secondIndex)
+void MeshSimplifier::updateFaces(uint32_t firstIndex, uint32_t secondIndex)
 {
-	unsigned int first, second, third;
-	for (size_t i = 0; i < indices.size() - 3; i += 3)
+	for (size_t i = 0; i < indices.size(); )
 	{
-		first = indices[i];		// First vertex of the current face.
-		second = indices[i + 1];	// Second vertex of the current face.
-		third = indices[i + 2];	// Third vertex of the current face.
+		GLuint v0 = indices[i];		// First vertex of the current face.
+		GLuint v1 = indices[i + 1];	// Second vertex of the current face.
+		GLuint v2 = indices[i + 2];	// Third vertex of the current face.
 
 		// If the current face contains the given edge indices.
-		if ((firstIndex == first || firstIndex == second || firstIndex == third)
-			&& (secondIndex == first || secondIndex == second || secondIndex == third))
+		if ((firstIndex == v0 || firstIndex == v1 || firstIndex == v2)
+			&& (secondIndex == v0 || secondIndex == v1 || secondIndex == v2))
 		{
-			for (int e = 0; e < edges.size(); )
-			{
-				unsigned int currEdgeFirst = edges[e].first;
-				unsigned int currEdgeSecond = edges[e].second;
-
-				// If the current edge is a part of the current face and is not connected to the firstEdgeInd 
-				// then remove it.
-				if ((currEdgeFirst != firstIndex && currEdgeSecond != firstIndex)
-					&& (currEdgeFirst == first || currEdgeFirst == second || currEdgeFirst == third)
-					&& (currEdgeSecond == first || currEdgeSecond == second || currEdgeSecond == third))
+			edges.erase(std::remove_if(edges.begin(), edges.end(), [firstIndex, v0, v1, v2](auto& edge)
 				{
-					edges.erase(edges.begin() + e);
-				}
-				else
-				{
-					e++;
-				}
-			}
+					return (edge.first != firstIndex && edge.second != firstIndex)
+						&& (edge.first == v0 || edge.first == v1 || edge.first == v2)
+						&& (edge.second == v0 || edge.second == v1 || edge.second == v2);
+				}), edges.end());
 
 			indices.erase(indices.begin() + i);
-			indices.erase(indices.begin() + i + 1);
-			indices.erase(indices.begin() + i + 2);
+			indices.erase(indices.begin() + i);
+			indices.erase(indices.begin() + i);
+		}
+		else
+		{
+			i += 3;
 		}
 	}
 
 	// Update m_OBJIndices that all indices that were of the removed index and set to the newly combined vertex.
-	for (auto it = indices.begin(); it != indices.end(); ++it)
+	for (auto& i : indices)
 	{
-		if (*it == secondIndex)
-		{
-			*it = firstIndex;
-		}
+		if (i == secondIndex)
+			i = firstIndex;
 	}
 }
 
-// @tbrief Prints vector of Edges.
-void MeshSimplification::printEdges()
+
+void MeshSimplifier::printEdges()
 {
 	printf("Edges: (%zd)\n", edges.size());
 	for (auto& e : edges)
 	{
 		printf(" - (%d, %d) error=%f\n", e.first, e.second, e.error);
 	}
-
 }
 
-void MeshSimplification::printNeighbors()
+void MeshSimplifier::printNeighbors()
 {
 	printf("Neighbors:\n");
-
 	for (size_t i = 0; i < vertices.size(); ++i)
 	{
-		printf(" - %zd: ", i);
 		auto range = vertexNeighbors.equal_range(i);
+		if (range.first == range.second) continue;
+
+		printf(" - %zd: ", i);
 		for (auto it = range.first; it != range.second; ++it)
 		{
 			printf("%d ", it->second);
 		}
 		printf("\n");
+	}
+}
+
+void MeshSimplifier::printFaces()
+{
+	printf("Faces: (%zd)\n", indices.size() / 3);
+	for (size_t i = 0; i < indices.size(); i += 3)
+	{
+		printf("[%d, %d, %d]\n", indices[i], indices[i + 1], indices[i + 2]);
 	}
 }

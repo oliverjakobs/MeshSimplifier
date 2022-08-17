@@ -39,6 +39,8 @@ public:
     Mesh(std::vector<glm::vec3> vertices, std::vector<GLuint> indices);
     ~Mesh();
 
+    void reload(std::vector<Vertex> vertices, std::vector<GLuint> indices);
+
     void render();
 
     size_t getVertexCount() const { return vertices.size(); }

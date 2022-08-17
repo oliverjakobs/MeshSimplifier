@@ -16,7 +16,7 @@ Mesh::Mesh(std::vector<glm::vec3> positions, std::vector<GLuint> indices)
     }
 
     // calc and apply face normals
-    for (size_t i = 0; i < indices.size() - 3; i += 3)
+    for (size_t i = 0; i < indices.size(); i += 3)
     {
         glm::vec3 p0 = positions[indices[i + 0]];
         glm::vec3 p1 = positions[indices[i + 1]];
@@ -50,12 +50,20 @@ Mesh::Mesh(std::vector<glm::vec3> positions, std::vector<GLuint> indices)
     ignisAddArrayBufferLayout(&vao, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW, 0, layout, 2);
 
     // create element buffer
-    ignisLoadElementBuffer(&vao, indices.data(), indices.size(), GL_STATIC_DRAW);
+    ignisLoadElementBuffer(&vao, nullptr, indices.size(), GL_DYNAMIC_DRAW);
+
+    reload(vertices, indices);
 }
 
 Mesh::~Mesh()
 {
     ignisDeleteVertexArray(&vao);
+}
+
+void Mesh::reload(std::vector<Vertex> vertices, std::vector<GLuint> indices)
+{
+    ignisBufferSubData(&vao.array_buffers[0], 0, vertices.size() * sizeof(Vertex), vertices.data());
+    ignisBufferSubData(&vao.element_buffer, 0, indices.size() * sizeof(GLuint), indices.data());
 }
 
 void Mesh::render()
