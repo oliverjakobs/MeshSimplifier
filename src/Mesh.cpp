@@ -5,7 +5,7 @@
 #include <sstream>
 #include <map>
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices)
+Mesh::Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
 {
     ignisGenerateVertexArray(&vao);
 
@@ -29,7 +29,7 @@ Mesh::~Mesh()
     ignisDeleteVertexArray(&vao);
 }
 
-void Mesh::reload(std::vector<Vertex> vertices, std::vector<GLuint> indices)
+void Mesh::reload(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
 {
     // calc and apply face normals
     for (size_t i = 0; i < indices.size(); i += 3)
@@ -49,7 +49,7 @@ void Mesh::reload(std::vector<Vertex> vertices, std::vector<GLuint> indices)
     }
 
     ignisBufferSubData(&vao.array_buffers[0], 0, vertices.size() * sizeof(Vertex), vertices.data());
-    ignisBufferSubData(&vao.element_buffer, 0, indices.size() * sizeof(GLuint), indices.data());
+    ignisBufferSubData(&vao.element_buffer, 0, indices.size() * sizeof(uint32_t), indices.data());
     vao.element_count = (GLsizei)indices.size();
 }
 
@@ -90,19 +90,19 @@ MeshData::MeshData(const std::string& filename)
         else if (c[0].compare("f") == 0)
         {
             size_t numVertices = c.size() - 1;
-            std::vector<GLuint> faceIndices;
+            std::vector<uint32_t> faceIndices;
 
             for (size_t i = 0; i < numVertices; ++i)
             {
-                GLuint index = std::stoi(splitString(c[i + 1], '/')[0]) - 1;
+                uint32_t index = std::stoi(splitString(c[i + 1], '/')[0]) - 1;
                 faceIndices.push_back(index);
             }
 
-            GLuint index0 = faceIndices[0];
-            GLuint index1 = faceIndices[1];
+            uint32_t index0 = faceIndices[0];
+            uint32_t index1 = faceIndices[1];
 
             for (size_t i = 2; i < numVertices; ++i) {
-                GLuint index2 = faceIndices[i];
+                uint32_t index2 = faceIndices[i];
 
                 indices.push_back(index0);
                 indices.push_back(index1);

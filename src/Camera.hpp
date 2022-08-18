@@ -29,9 +29,14 @@ public:
     void stopDragging()  { dragging = false; }
 
     glm::vec3 getPosition() const { return eye; }
-    glm::mat4 GetViewMatrix() const { return viewMat; }
+    glm::mat4 getViewMatrix() const { return viewMat; }
+    glm::vec2 getScreenSize() const { return screenSize; }
+    float getAspectRatio() const { return (float)screenSize.x / (float)screenSize.y; }
+
+    int getWidth() const { return screenSize.x; }
+    int getHeight() const { return screenSize.y; }
 
     // Camera forward is -z
-    glm::vec3 GetViewDir() const { return -glm::transpose(viewMat)[2]; }
-    glm::vec3 GetRightVector() const { return glm::transpose(viewMat)[0]; }
+    glm::vec3 getViewDir() const { return -glm::transpose(viewMat)[2]; }
+    glm::vec3 getRightVector() const { return glm::transpose(viewMat)[0]; }
 };

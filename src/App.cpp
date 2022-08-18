@@ -6,7 +6,7 @@ static void glfwErrorCallback(int error, const char* desc);
 static void ignisErrorCallback(ignisErrorLevel level, const char* desc);
 
 GLFWApplication::GLFWApplication(const char* title, int width, int height, bool debug)
-    : width(width), height(height), deltaTime(0.0f), lastFrame(0.0f), window(nullptr)
+    : deltaTime(0.0f), lastFrame(0.0f), window(nullptr)
 {
     // initialize glfw
     glfwSetErrorCallback(glfwErrorCallback);
@@ -61,8 +61,6 @@ void GLFWApplication::run()
         glfwPollEvents();
     }
 }
-
-float GLFWApplication::getAspectRatio() const { return (float)width / (float)height; }
 
 void glfwErrorCallback(int error, const char* desc)
 {

@@ -21,7 +21,7 @@ struct HalfEdge
 struct MeshData
 {
     std::vector<Vertex> vertices;
-    std::vector<GLuint> indices;
+    std::vector<uint32_t> indices;
 
     MeshData(const std::string& filename);
     ~MeshData();
@@ -33,10 +33,10 @@ private:
     IgnisVertexArray vao;
 
 public:
-    Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices);
+    Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
     ~Mesh();
 
-    void reload(std::vector<Vertex> vertices, std::vector<GLuint> indices);
+    void reload(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
 
     void render();
 };

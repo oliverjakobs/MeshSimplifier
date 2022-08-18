@@ -36,7 +36,7 @@ void Camera::updateMouse(float x, float y, float lastX, float lastY)
     float yAngle = (lastY - y) * deltaAngleY;
 
     // Extra step to handle the problem when the camera direction is the same as the up vector
-    float cosAngle = glm::dot(GetViewDir(), up);
+    float cosAngle = glm::dot(getViewDir(), up);
     if (cosAngle * glm::sign(deltaAngleY) > 0.99f)
         deltaAngleY = 0;
 
@@ -47,7 +47,7 @@ void Camera::updateMouse(float x, float y, float lastX, float lastY)
 
     // step 3: Rotate the camera around the pivot point on the second axis.
     glm::mat4x4 rotationMatrixY(1.0f);
-    rotationMatrixY = glm::rotate(rotationMatrixY, yAngle, GetRightVector());
+    rotationMatrixY = glm::rotate(rotationMatrixY, yAngle, getRightVector());
     eye = (rotationMatrixY * (position - pivot)) + pivot;
 
     // Update the camera view

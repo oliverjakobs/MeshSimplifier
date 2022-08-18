@@ -9,7 +9,7 @@ struct Edge
     uint32_t first;
     uint32_t second;
 
-    float error = 0;
+    float error;
     glm::mat4 qMat;
     glm::vec3 middle;
 
@@ -24,8 +24,7 @@ struct EdgeComperator
 {
     bool operator()(const struct Edge& e1, const struct Edge& e2) const
     {
-        if (e2.error < e1.error) return true;
-        return false;
+        return (e2.error < e1.error);
     }
 };
 
@@ -33,20 +32,20 @@ class MeshSimplifier
 {
 private:
     std::vector<Vertex> vertices;
-    std::vector<GLuint> indices;
+    std::vector<uint32_t> indices;
     std::vector<Edge> edges;
 
     std::vector<glm::mat4> errors;
     std::multimap<uint32_t, uint32_t> vertexNeighbors;
 
 public:
-    MeshSimplifier(std::vector<Vertex> vertices, std::vector<GLuint> indices);
+    MeshSimplifier(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
     ~MeshSimplifier();
 
     void run(size_t targetFaces);
     
     std::vector<Vertex> getVertices() const { return vertices; }
-    std::vector<GLuint> getIndices() const { return indices; }
+    std::vector<uint32_t> getIndices() const { return indices; }
 
     size_t getVertexCount() const { return vertices.size(); }
     size_t getFaceCount() const { return indices.size() / 3; }
@@ -57,13 +56,11 @@ public:
 
 private:
     void createEdges();
-    void getVertexNeighbors();
-    void removeNeighbor(uint32_t neighbor);
+    void setEdgeError(Edge& edge);
 
     bool isFace(uint32_t v1, uint32_t v2);
     glm::mat4 getQuadricError(uint32_t vertex);
 
-    void setEdgeError(Edge& edge);
-
-    void updateFaces(uint32_t first, uint32_t second);
+    void updateNeighbors(uint32_t newVertex, uint32_t removedVertex);
+    void updateFaces(uint32_t newVertex, uint32_t removedVertex);
 };

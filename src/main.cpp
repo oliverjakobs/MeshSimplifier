@@ -29,11 +29,11 @@ Camera camera(cameraPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
-
 class Application : public GLFWApplication
 {
 private:
     IgnisShader shader;
+
     Mesh* mesh;
     MeshSimplifier* simplifier;
 
@@ -47,7 +47,7 @@ public:
         glfwSetMouseButtonCallback(window, mouse_button_callback);
         glfwSetCursorPosCallback(window, mouse_move_callback);
 
-        camera.setScreenSize((float)width, (float)height);
+        camera.setScreenSize((float)SCR_WIDTH, (float)SCR_HEIGHT);
 
         gui_init(window, "#version 130");
 
@@ -66,6 +66,7 @@ public:
     ~Application()
     {
         delete mesh;
+        delete simplifier;
 
         ignisDeleteShader(&shader);
 
@@ -84,8 +85,8 @@ public:
         ignisSetUniform3f(&shader, "lightPos", &camera.getPosition()[0]);
 
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), getAspectRatio(), 0.1f, 100.0f);
-        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), camera.getAspectRatio(), 0.1f, 100.0f);
+        glm::mat4 view = camera.getViewMatrix();
         ignisSetUniformMat4(&shader, "projection", &projection[0][0]);
         ignisSetUniformMat4(&shader, "view", &view[0][0]);
 
@@ -115,7 +116,11 @@ public:
 
         gui_start_frame();
 
-        ImGui::Begin("Info");
+        //ImGui::ShowDemoWindow(NULL);
+
+        ImGui::SetNextWindowPos(ImVec2(0, 0));
+        ImGui::SetNextWindowSize(ImVec2(200, camera.getHeight()));
+        ImGui::Begin("Info", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         ImGui::Text("Mesh info:");
         ImGui::Text("Vertices: %d", simplifier->getVertexCount());
@@ -175,7 +180,8 @@ void mouse_move_callback(GLFWwindow* window, double xposIn, double yposIn)
     float xPos = static_cast<float>(xposIn);
     float yPos = static_cast<float>(yposIn);
 
-    camera.updateMouse(xPos, yPos, lastX, lastY);
+    if (!ImGui::GetIO().WantCaptureMouse)
+        camera.updateMouse(xPos, yPos, lastX, lastY);
 
     lastX = xPos;
     lastY = yPos;
