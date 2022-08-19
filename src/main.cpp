@@ -29,6 +29,10 @@ Camera camera(cameraPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
+// mesh
+MeshData data("res/monkey.obj");
+//MeshData data("res/box.obj");
+
 class Application : public GLFWApplication
 {
 private:
@@ -53,11 +57,7 @@ public:
 
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
-        MeshData data("res/monkey.obj");
-        //MeshData data("res/box.obj");
-
         simplifier = new MeshSimplifier(data.vertices, data.indices);
-
         mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
 
         targetFaces = simplifier->getFaceCount();
@@ -135,6 +135,15 @@ public:
         {
             simplifier->run(targetFaces);
             mesh->reload(simplifier->getVertices(), simplifier->getIndices());
+            printf("Mesh simplified (%zd faces).\n", simplifier->getFaceCount());
+        }
+
+        if (ImGui::Button("Reset"))
+        {
+            simplifier->reload(data.vertices, data.indices);
+            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
+            targetFaces = simplifier->getFaceCount();
+            printf("Mesh reset.\n");
         }
 
         ImGui::Separator();

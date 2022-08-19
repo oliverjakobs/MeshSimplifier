@@ -31,10 +31,10 @@ public:
     glm::vec3 getPosition() const { return eye; }
     glm::mat4 getViewMatrix() const { return viewMat; }
     glm::vec2 getScreenSize() const { return screenSize; }
-    float getAspectRatio() const { return (float)screenSize.x / (float)screenSize.y; }
+    float getAspectRatio() const { return screenSize.x / screenSize.y; }
 
-    int getWidth() const { return screenSize.x; }
-    int getHeight() const { return screenSize.y; }
+    float getWidth() const { return screenSize.x; }
+    float getHeight() const { return screenSize.y; }
 
     // Camera forward is -z
     glm::vec3 getViewDir() const { return -glm::transpose(viewMat)[2]; }

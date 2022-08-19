@@ -3,8 +3,24 @@
 #include <algorithm>
 
 MeshSimplifier::MeshSimplifier(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
-    : vertices(vertices), indices(indices)
 {
+    reload(vertices, indices);
+}
+
+MeshSimplifier::~MeshSimplifier()
+{
+}
+
+void MeshSimplifier::reload(std::vector<Vertex> v, std::vector<uint32_t> i)
+{
+    vertices = v;
+    indices = i;
+
+    edges.clear();
+    errors.clear();
+    vertexNeighbors.clear();
+
+    // create edges
     createEdges();
 
     // get all neighbors
@@ -25,15 +41,11 @@ MeshSimplifier::MeshSimplifier(std::vector<Vertex> vertices, std::vector<uint32_
     std::make_heap(edges.begin(), edges.end(), EdgeComperator());
 }
 
-MeshSimplifier::~MeshSimplifier()
-{
-}
-
 void MeshSimplifier::run(size_t targetFaces)
 {
     while (getFaceCount() > targetFaces)
     {
-        // remove the edge with the minimal error.
+        // remove the edge with minimal error
         std::pop_heap(edges.begin(), edges.end(), EdgeComperator());
         Edge removedEdge = edges.back();
         edges.pop_back();
@@ -41,14 +53,13 @@ void MeshSimplifier::run(size_t targetFaces)
         int newVertex = removedEdge.first;
         int removedVertex = removedEdge.second;
 
-        // Update the error and position of the new vertex.
+        // set the error and position of the new vertex.
         errors[newVertex] = removedEdge.qMat;
         vertices[newVertex].position = removedEdge.middle;
 
+        // update data
         updateNeighbors(newVertex, removedVertex);
-
-        // update faces
-        updateFaces(newVertex, removedVertex);
+        updateIndices(newVertex, removedVertex);
 
         // update heap
         std::make_heap(edges.begin(), edges.end(), EdgeComperator());
@@ -57,32 +68,15 @@ void MeshSimplifier::run(size_t targetFaces)
 
 void MeshSimplifier::createEdges()
 {
-    std::vector<Edge> allEdges;
     for (size_t i = 0; i < indices.size() - 3;)
     {
-        uint32_t first = indices[i++];
-        uint32_t second = indices[i++];
-        uint32_t third = indices[i++];
+        uint32_t v0 = indices[i++];
+        uint32_t v1 = indices[i++];
+        uint32_t v2 = indices[i++];
 
-        allEdges.push_back({ first, second });
-        allEdges.push_back({ second, third });
-        allEdges.push_back({ third, first });
-    }
-
-    // remove duplicates
-    for (size_t i = 0; i < allEdges.size(); ++i)
-    {
-        bool found = false;
-        for (size_t j = i + 1; j < allEdges.size(); ++j)
-        {
-            if (allEdges[i] == allEdges[j])
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) edges.push_back(allEdges[i]);
+        edges.push_back({ v0, v1 });
+        edges.push_back({ v1, v2 });
+        edges.push_back({ v2, v0 });
     }
 }
 
@@ -93,7 +87,7 @@ void MeshSimplifier::setEdgeError(Edge& edge)
     edge.error = glm::dot(glm::vec4(edge.middle, 1.0f), edge.qMat * glm::vec4(edge.middle, 1.0f));
 }
 
-bool MeshSimplifier::isFace(uint32_t v1, uint32_t v2)
+bool MeshSimplifier::checkNeighbor(uint32_t v1, uint32_t v2)
 {
     auto range = vertexNeighbors.equal_range(v1);
     for (auto it = range.first; it != range.second; it++)
@@ -114,7 +108,7 @@ glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
         for (auto v2 = std::next(v1); v2 != range.second; ++v2)
         {
             // check if vertex, v1 and v2 form a face
-            if (!isFace(v1->second, v2->second)) continue;
+            if (!checkNeighbor(v1->second, v2->second)) continue;
 
             // Calc cross prod.
             glm::vec3 p1 = vertices[v1->second].position - vertices[vertex].position;
@@ -156,16 +150,16 @@ void MeshSimplifier::updateNeighbors(uint32_t newVertex, uint32_t removedVertex)
 
     // erase the removedVertex in the neighbors multimap
     vertexNeighbors.erase(removedVertex);
-    for (auto iter = vertexNeighbors.begin(); iter != vertexNeighbors.end();)
+    for (auto it = vertexNeighbors.begin(); it != vertexNeighbors.end();)
     {
-        if (iter->second == removedVertex)
-            iter = vertexNeighbors.erase(iter);
+        if (it->second == removedVertex)
+            it = vertexNeighbors.erase(it);
         else
-            ++iter;
+            ++it;
     }
 }
 
-void MeshSimplifier::updateFaces(uint32_t newVertex, uint32_t removedVertex)
+void MeshSimplifier::updateIndices(uint32_t newVertex, uint32_t removedVertex)
 {
     // remove all invalid edges and indices
     for (size_t i = 0; i < indices.size(); )
@@ -204,15 +198,23 @@ void MeshSimplifier::updateFaces(uint32_t newVertex, uint32_t removedVertex)
 
     // Update edges, so any edge that was connected to the removed edge has it's error recalculated 
     // and is only connected to the remaining vertex.
-    for (auto& edge : edges)
+    for (auto it = edges.begin(); it != edges.end();)
     {
-        if (edge.second == removedVertex)
-            edge.second = newVertex;
-        else if (edge.first == removedVertex)
-            edge.first = newVertex;
+        if (it->first == it->second)
+        {
+            it = edges.erase(it);
+            continue;
+        }
 
-        if (edge.first == newVertex || edge.second == newVertex)
-            setEdgeError(edge);
+        if (it->second == removedVertex)
+            it->second = newVertex;
+        else if (it->first == removedVertex)
+            it->first = newVertex;
+
+        if (it->first == newVertex || it->second == newVertex)
+            setEdgeError(*it);
+
+        ++it;
     }
 }
 

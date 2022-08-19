@@ -33,14 +33,16 @@ class MeshSimplifier
 private:
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
-    std::vector<Edge> edges;
 
+    std::vector<Edge> edges;
     std::vector<glm::mat4> errors;
     std::multimap<uint32_t, uint32_t> vertexNeighbors;
 
 public:
     MeshSimplifier(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
     ~MeshSimplifier();
+
+    void reload(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
 
     void run(size_t targetFaces);
     
@@ -58,9 +60,9 @@ private:
     void createEdges();
     void setEdgeError(Edge& edge);
 
-    bool isFace(uint32_t v1, uint32_t v2);
+    bool checkNeighbor(uint32_t v1, uint32_t v2);
     glm::mat4 getQuadricError(uint32_t vertex);
 
     void updateNeighbors(uint32_t newVertex, uint32_t removedVertex);
-    void updateFaces(uint32_t newVertex, uint32_t removedVertex);
+    void updateIndices(uint32_t newVertex, uint32_t removedVertex);
 };
