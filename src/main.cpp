@@ -134,14 +134,14 @@ public:
         if (ImGui::Button("Simplify"))
         {
             simplifier->run(targetFaces);
-            mesh->reload(simplifier->getIndices());
+            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
             printf("Mesh simplified (%zd faces).\n", simplifier->getFaceCount());
         }
 
         if (ImGui::Button("Reset"))
         {
             simplifier->reload(data.vertices, data.indices);
-            mesh->reload(simplifier->getIndices());
+            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
             targetFaces = simplifier->getFaceCount();
             printf("Mesh reset.\n");
         }

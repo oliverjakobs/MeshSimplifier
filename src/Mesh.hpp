@@ -30,7 +30,7 @@ public:
     Mesh(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
     ~Mesh();
 
-    void reload(std::vector<uint32_t> indices);
+    void reload(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
 
     void render();
 };

@@ -15,7 +15,6 @@ Mesh::Mesh(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices)
 
     // create element buffer
     ignisLoadElementBuffer(&vao, indices.data(), indices.size(), GL_DYNAMIC_DRAW);
-    reload(indices);
 }
 
 Mesh::~Mesh()
@@ -23,8 +22,9 @@ Mesh::~Mesh()
     ignisDeleteVertexArray(&vao);
 }
 
-void Mesh::reload(std::vector<uint32_t> indices)
+void Mesh::reload(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices)
 {
+    ignisBufferSubData(&vao.array_buffers[0], 0, vertices.size() * sizeof(glm::vec3), vertices.data());
     ignisBufferSubData(&vao.element_buffer, 0, indices.size() * sizeof(uint32_t), indices.data());
     vao.element_count = (GLsizei)indices.size();
 }
