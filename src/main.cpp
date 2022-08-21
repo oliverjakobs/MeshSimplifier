@@ -30,8 +30,8 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
 // mesh
-MeshData data("res/monkey.obj");
-//MeshData data("res/box.obj");
+//MeshData data("res/monkey.obj");
+MeshData data("res/box.obj");
 
 class Application : public GLFWApplication
 {
@@ -134,14 +134,14 @@ public:
         if (ImGui::Button("Simplify"))
         {
             simplifier->run(targetFaces);
-            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
+            mesh->reload(simplifier->getIndices());
             printf("Mesh simplified (%zd faces).\n", simplifier->getFaceCount());
         }
 
         if (ImGui::Button("Reset"))
         {
             simplifier->reload(data.vertices, data.indices);
-            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
+            mesh->reload(simplifier->getIndices());
             targetFaces = simplifier->getFaceCount();
             printf("Mesh reset.\n");
         }

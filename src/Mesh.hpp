@@ -6,12 +6,6 @@
 #include <Ignis/Ignis.h>
 #include <glm/glm.hpp>
 
-struct Vertex
-{
-    glm::vec3 position;
-    glm::vec3 normal;
-};
-
 struct HalfEdge
 {
     uint32_t vert;
@@ -20,7 +14,7 @@ struct HalfEdge
 
 struct MeshData
 {
-    std::vector<Vertex> vertices;
+    std::vector<glm::vec3> vertices;
     std::vector<uint32_t> indices;
 
     MeshData(const std::string& filename);
@@ -33,10 +27,10 @@ private:
     IgnisVertexArray vao;
 
 public:
-    Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+    Mesh(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
     ~Mesh();
 
-    void reload(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+    void reload(std::vector<uint32_t> indices);
 
     void render();
 };

@@ -5,23 +5,17 @@
 #include <sstream>
 #include <map>
 
-Mesh::Mesh(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
+Mesh::Mesh(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices)
 {
     ignisGenerateVertexArray(&vao);
 
     // create vertex buffer
-    IgnisBufferElement layout[] =
-    {
-        { GL_FLOAT, 3, GL_FALSE },
-        { GL_FLOAT, 3, GL_FALSE },
-    };
-
-    ignisAddArrayBufferLayout(&vao, vertices.size() * sizeof(Vertex), nullptr, GL_STATIC_DRAW, 0, layout, 2);
+    IgnisBufferElement layout[] = { { GL_FLOAT, 3, GL_FALSE } };
+    ignisAddArrayBufferLayout(&vao, vertices.size() * sizeof(glm::vec3), vertices.data(), GL_STATIC_DRAW, 0, layout, 1);
 
     // create element buffer
-    ignisLoadElementBuffer(&vao, nullptr, indices.size(), GL_DYNAMIC_DRAW);
-
-    reload(vertices, indices);
+    ignisLoadElementBuffer(&vao, indices.data(), indices.size(), GL_DYNAMIC_DRAW);
+    reload(indices);
 }
 
 Mesh::~Mesh()
@@ -29,26 +23,8 @@ Mesh::~Mesh()
     ignisDeleteVertexArray(&vao);
 }
 
-void Mesh::reload(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
+void Mesh::reload(std::vector<uint32_t> indices)
 {
-    // calc and apply face normals
-    for (size_t i = 0; i < indices.size(); i += 3)
-    {
-        glm::vec3 p0 = vertices[indices[i + 0]].position;
-        glm::vec3 p1 = vertices[indices[i + 1]].position;
-        glm::vec3 p2 = vertices[indices[i + 2]].position;
-
-        glm::vec3 normal = glm::cross(p1 - p0, p2 - p0);
-
-        if (glm::length(normal) != 0.0f)
-            normal = glm::normalize(normal);
-
-        vertices[indices[i + 0]].normal = normal;
-        vertices[indices[i + 1]].normal = normal;
-        vertices[indices[i + 2]].normal = normal;
-    }
-
-    ignisBufferSubData(&vao.array_buffers[0], 0, vertices.size() * sizeof(Vertex), vertices.data());
     ignisBufferSubData(&vao.element_buffer, 0, indices.size() * sizeof(uint32_t), indices.data());
     vao.element_count = (GLsizei)indices.size();
 }
@@ -85,7 +61,7 @@ MeshData::MeshData(const std::string& filename)
 
         if (c[0].compare("v") == 0)
         {
-            vertices.push_back({ glm::vec3(std::stof(c[1]), std::stof(c[2]), std::stof(c[3])) });
+            vertices.push_back(glm::vec3(std::stof(c[1]), std::stof(c[2]), std::stof(c[3])));
         }
         else if (c[0].compare("f") == 0)
         {

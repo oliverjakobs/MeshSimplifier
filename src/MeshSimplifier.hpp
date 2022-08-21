@@ -31,22 +31,23 @@ struct EdgeComperator
 class MeshSimplifier
 {
 private:
-    std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
-    std::vector<Edge> edges;
+    std::vector<glm::vec3> vertices;
     std::vector<glm::mat4> errors;
     std::multimap<uint32_t, uint32_t> vertexNeighbors;
 
+    std::vector<Edge> edges;
+
 public:
-    MeshSimplifier(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+    MeshSimplifier(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
     ~MeshSimplifier();
 
-    void reload(std::vector<Vertex> vertices, std::vector<uint32_t> indices);
+    void reload(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
 
     void run(size_t targetFaces);
     
-    std::vector<Vertex> getVertices() const { return vertices; }
+    std::vector<glm::vec3> getVertices() const { return vertices; }
     std::vector<uint32_t> getIndices() const { return indices; }
 
     size_t getVertexCount() const { return vertices.size(); }

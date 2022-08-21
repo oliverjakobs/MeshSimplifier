@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-MeshSimplifier::MeshSimplifier(std::vector<Vertex> vertices, std::vector<uint32_t> indices)
+MeshSimplifier::MeshSimplifier(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices)
 {
     reload(vertices, indices);
 }
@@ -11,7 +11,7 @@ MeshSimplifier::~MeshSimplifier()
 {
 }
 
-void MeshSimplifier::reload(std::vector<Vertex> v, std::vector<uint32_t> i)
+void MeshSimplifier::reload(std::vector<glm::vec3> v, std::vector<uint32_t> i)
 {
     vertices = v;
     indices = i;
@@ -55,7 +55,7 @@ void MeshSimplifier::run(size_t targetFaces)
 
         // set the error and position of the new vertex.
         errors[newVertex] = removedEdge.qMat;
-        vertices[newVertex].position = removedEdge.middle;
+        vertices[newVertex] = removedEdge.middle;
 
         // update data
         updateNeighbors(newVertex, removedVertex);
@@ -83,7 +83,7 @@ void MeshSimplifier::createEdges()
 void MeshSimplifier::setEdgeError(Edge& edge)
 {
     edge.qMat = errors[edge.first] + errors[edge.second];
-    edge.middle = (vertices[edge.first].position + vertices[edge.second].position) / 2.0f;
+    edge.middle = (vertices[edge.first] + vertices[edge.second]) / 2.0f;
     edge.error = glm::dot(glm::vec4(edge.middle, 1.0f), edge.qMat * glm::vec4(edge.middle, 1.0f));
 }
 
@@ -111,12 +111,12 @@ glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
             if (!checkNeighbor(v1->second, v2->second)) continue;
 
             // Calc cross prod.
-            glm::vec3 p1 = vertices[v1->second].position - vertices[vertex].position;
-            glm::vec3 p2 = vertices[v2->second].position - vertices[vertex].position;
+            glm::vec3 p1 = vertices[v1->second] - vertices[vertex];
+            glm::vec3 p2 = vertices[v2->second] - vertices[vertex];
             glm::vec3 n = glm::cross(p2, p1);
             n = glm::normalize(n);
 
-            glm::vec4 v_tag = glm::vec4(n, -(glm::dot(vertices[vertex].position, n)));
+            glm::vec4 v_tag = glm::vec4(n, -(glm::dot(vertices[vertex], n)));
 
             // calc error matrix
             for (int i = 0; i < 4; ++i)
