@@ -14,35 +14,33 @@
 
 \chapter*{Dokumentation zur Modulaufgabe:}
 
-\section*{Thema}
-
-\section*{Motivation}
+\section*{Thema und Motivation}
 
 \section*{Bibliotheken}
 
-GLFW
+Um für mein Projekt ein Fenster mit OpenGL-Context erstellen zu können und Zugriff auf Maus und Tastatur zu haben, verwende ich die Bibliothek \textbf{GLFW}. Ich habe mich für GLFW entschieden weil ich damit die meiste Erfahrung hab und gut damit klar komme.
 
-Ingis/GLAD
+Um mir den Umgang mit OpenGL zu vereinfachen, verwende ich das von mir selbst entwickeltes Framework \textbf{Ignis}. Teil dieses Frameworks ist auch die OpenGL-Loading-Library \textbf{GLAD}.
 
 DearImGui
 
 glm
 
+\section*{Designentscheidungen}
+
+Kein Export zu .obj o.ä. - trivial, und ich würde im normalfall in ein Engine-Spezifisches Format exportieren
+
+Edges und Neighbor multimap - edges nur zum Speichern der Kantenkosten und zum Bestimmen der nächsten Kante zum entfernen
+
+Vertices nur Positionen - macht Algorithmus einfacher und übersichtlicher
+
+Flat-Shading - ermöglicht Vertices mit nur Positionen, außerdem hebt das die Faces hervor
+
+Vertices werden nicht geupdated/entfernt (nur Indices) - würde ich erst beim exportieren machen
+
 \section*{Bedienung}
 
 \section*{Build}
-
-\section*{Designentscheidungen}
-
-Edges und Neighbor multimap 
-
-Vertices nur Positionen
-
-Shading
-
-Vertices werden nicht geupdated/entfernt (nur Indices)
-
-Kein Export zu .obj o.ä.
 
 
 \end{document}
