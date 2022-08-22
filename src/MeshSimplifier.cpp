@@ -16,21 +16,31 @@ void MeshSimplifier::reload(std::vector<glm::vec3> v, std::vector<uint32_t> i)
     vertices = v;
     indices = i;
 
-    edges.clear();
-    errors.clear();
-    vertexNeighbors.clear();
+    neighbors.clear();
+    neighbors.resize(vertices.size());
 
     // create edges
-    createEdges();
+    edges.clear();
+    for (size_t i = 0; i < indices.size() - 3;)
+    {
+        uint32_t v0 = indices[i++];
+        uint32_t v1 = indices[i++];
+        uint32_t v2 = indices[i++];
+
+        edges.push_back({ v0, v1 });
+        edges.push_back({ v1, v2 });
+        edges.push_back({ v2, v0 });
+    }
 
     // get all neighbors
     for (auto& e : edges)
     {
-        vertexNeighbors.insert({ e.first, e.second });
-        vertexNeighbors.insert({ e.second, e.first });
+        neighbors[e.first].push_back(e.second);
+        neighbors[e.second].push_back(e.first);
     }
 
     // calc the Quadric Error for every vertex
+    errors.clear();
     for (int i = 0; i < vertices.size(); i++)
         errors.push_back(getQuadricError(i));
 
@@ -57,26 +67,11 @@ void MeshSimplifier::run(size_t targetFaces)
         errors[newVertex] = removedEdge.qMat;
         vertices[newVertex] = removedEdge.middle;
 
-        // update data
-        updateNeighbors(newVertex, removedVertex);
+        // update faces
         updateIndices(newVertex, removedVertex);
 
         // update heap
         std::make_heap(edges.begin(), edges.end(), EdgeComperator());
-    }
-}
-
-void MeshSimplifier::createEdges()
-{
-    for (size_t i = 0; i < indices.size() - 3;)
-    {
-        uint32_t v0 = indices[i++];
-        uint32_t v1 = indices[i++];
-        uint32_t v2 = indices[i++];
-
-        edges.push_back({ v0, v1 });
-        edges.push_back({ v1, v2 });
-        edges.push_back({ v2, v0 });
     }
 }
 
@@ -87,35 +82,23 @@ void MeshSimplifier::setEdgeError(Edge& edge)
     edge.error = glm::dot(glm::vec4(edge.middle, 1.0f), edge.qMat * glm::vec4(edge.middle, 1.0f));
 }
 
-bool MeshSimplifier::checkNeighbor(uint32_t v1, uint32_t v2)
-{
-    auto range = vertexNeighbors.equal_range(v1);
-    for (auto it = range.first; it != range.second; it++)
-    {
-        if (v2 == it->second) return true;
-    }
-    return false;
-}
-
 glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
 {
     glm::mat4 qMat(1.0f);
 
     // Find all the triangles of this vertex and add it's error to it.
-    auto range = vertexNeighbors.equal_range(vertex);
-    for (auto v1 = range.first; v1 != range.second; ++v1)
+    for (auto v1 = neighbors[vertex].begin(); v1 != neighbors[vertex].end(); ++v1)
     {
-        for (auto v2 = std::next(v1); v2 != range.second; ++v2)
+        for (auto v2 = std::next(v1); v2 != neighbors[vertex].end(); ++v2)
         {
             // check if vertex, v1 and v2 form a face
-            if (!checkNeighbor(v1->second, v2->second)) continue;
+            if (std::find(neighbors[*v1].begin(), neighbors[*v1].end(), *v2) == neighbors[*v1].end())
+                continue;
 
             // Calc cross prod.
-            glm::vec3 p1 = vertices[v1->second] - vertices[vertex];
-            glm::vec3 p2 = vertices[v2->second] - vertices[vertex];
-            glm::vec3 n = glm::cross(p2, p1);
-            n = glm::normalize(n);
-
+            glm::vec3 p1 = vertices[*v1] - vertices[vertex];
+            glm::vec3 p2 = vertices[*v2] - vertices[vertex];
+            glm::vec3 n = glm::normalize(glm::cross(p2, p1));
             glm::vec4 v_tag = glm::vec4(n, -(glm::dot(vertices[vertex], n)));
 
             // calc error matrix
@@ -125,38 +108,6 @@ glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
         }
     }
     return qMat;
-}
-
-void MeshSimplifier::updateNeighbors(uint32_t newVertex, uint32_t removedVertex)
-{
-    // move all of removedVertex's neighbors to newVertex
-    auto range = vertexNeighbors.equal_range(removedVertex);
-    for (auto it = range.first; it != range.second; ++it)
-    {
-        // prevent duplicates
-        bool neighborToBothVertices = false;
-
-        auto range2 = vertexNeighbors.equal_range(it->second);
-        for (auto it2 = range2.first; it2 != range2.second; ++it2)
-        {
-            if (it2->second == newVertex)
-                neighborToBothVertices = true;
-        }
-
-        // insert new neighbor
-        if (it->second != newVertex && !neighborToBothVertices)
-            vertexNeighbors.insert({ it->second, newVertex });
-    }
-
-    // erase the removedVertex in the neighbors multimap
-    vertexNeighbors.erase(removedVertex);
-    for (auto it = vertexNeighbors.begin(); it != vertexNeighbors.end();)
-    {
-        if (it->second == removedVertex)
-            it = vertexNeighbors.erase(it);
-        else
-            ++it;
-    }
 }
 
 void MeshSimplifier::updateIndices(uint32_t newVertex, uint32_t removedVertex)
@@ -225,23 +176,6 @@ void MeshSimplifier::printEdges()
     for (auto& e : edges)
     {
         printf(" - (%d, %d) error=%f\n", e.first, e.second, e.error);
-    }
-}
-
-void MeshSimplifier::printNeighbors()
-{
-    printf("Neighbors:\n");
-    for (uint32_t i = 0; i < vertices.size(); ++i)
-    {
-        auto range = vertexNeighbors.equal_range(i);
-        if (range.first == range.second) continue;
-
-        printf(" - %d: ", i);
-        for (auto it = range.first; it != range.second; ++it)
-        {
-            printf("%d ", it->second);
-        }
-        printf("\n");
     }
 }
 

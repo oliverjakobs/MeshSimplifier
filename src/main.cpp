@@ -30,8 +30,9 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
 // mesh
-//MeshData data("res/monkey.obj");
-MeshData data("res/box.obj");
+//MeshData data("res/Marsienne_Base.obj");
+MeshData data("res/monkey.obj");
+//MeshData data("res/cube.obj");
 
 class Application : public GLFWApplication
 {
@@ -120,7 +121,7 @@ public:
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(200, camera.getHeight()));
-        ImGui::Begin("Info", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::Begin("Info", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         ImGui::Text("Mesh info:");
         ImGui::Text("Vertices: %d", simplifier->getVertexCount());
