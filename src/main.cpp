@@ -1,21 +1,13 @@
-#include <Ignis/Ignis.h>
-#include <GLFW/glfw3.h>
+#include "App.hpp"
+
+#include "Mesh.hpp"
+#include "MeshSimplifier.hpp"
+
+#include "Camera.hpp"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
-#include "Gui.hpp"
-
-#include "Mesh.hpp"
-#include "MeshSimplifier.hpp"
-#include "App.hpp"
-
-#include "Camera.hpp"
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mod);
-void mouse_move_callback(GLFWwindow* window, double xpos, double ypos);
 
 // settings
 const unsigned int SCR_WIDTH = 1280;
@@ -48,13 +40,7 @@ private:
 public:
     Application() : GLFWApplication("Application", SCR_WIDTH, SCR_HEIGHT, true)
     {
-        glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-        glfwSetMouseButtonCallback(window, mouse_button_callback);
-        glfwSetCursorPosCallback(window, mouse_move_callback);
-
         camera.setScreenSize((float)SCR_WIDTH, (float)SCR_HEIGHT);
-
-        gui_init(window, "#version 130");
 
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
@@ -70,17 +56,15 @@ public:
         delete simplifier;
 
         ignisDeleteShader(&shader);
-
-        gui_shutdown();
     }
 
-    void update(float deltaTime)
+    void onUpdate(float deltaTime)
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
     }
 
-    void render()
+    void onRender()
     {
         ignisUseShader(&shader);
         ignisSetUniform3f(&shader, "lightPos", &camera.getPosition()[0]);
@@ -114,9 +98,10 @@ public:
 
         // render the cube
         mesh->render();
+    }
 
-        gui_start_frame();
-
+    void onRenderGui()
+    {
         //ImGui::ShowDemoWindow(NULL);
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
@@ -136,6 +121,7 @@ public:
         {
             simplifier->run(targetFaces);
             mesh->reload(simplifier->getVertices(), simplifier->getIndices());
+            targetFaces = simplifier->getFaceCount();
             printf("Mesh simplified (%zd faces).\n", simplifier->getFaceCount());
         }
 
@@ -155,8 +141,30 @@ public:
         ImGui::Checkbox("Cull Backfaces", &cullBackFaces);
 
         ImGui::End();
+    }
 
-        gui_render();
+    void onResize(int width, int height)
+    {
+        glViewport(0, 0, width, height);
+        camera.setScreenSize((float)width, (float)height);
+    }
+
+    void onMouseButton(int button, int action)
+    {
+        if (button == GLFW_MOUSE_BUTTON_LEFT)
+        {
+            if (action == GLFW_PRESS)   camera.startDragging();
+            else                        camera.stopDragging();
+        }
+    }
+
+    void onMouseMove(float xPos, float yPos)
+    {
+        if (!ImGui::GetIO().WantCaptureMouse)
+            camera.updateMouse(xPos, yPos, lastX, lastY);
+
+        lastX = xPos;
+        lastY = yPos;
     }
 };
 
@@ -168,31 +176,4 @@ int main()
 
     delete app;
     return 0;
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-    camera.setScreenSize((float)width, (float)height);
-}
-
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mod)
-{
-    if (button == GLFW_MOUSE_BUTTON_LEFT)
-    {
-        if (action == GLFW_PRESS)   camera.startDragging();
-        else                        camera.stopDragging();
-    }
-}
-
-void mouse_move_callback(GLFWwindow* window, double xposIn, double yposIn)
-{
-    float xPos = static_cast<float>(xposIn);
-    float yPos = static_cast<float>(yposIn);
-
-    if (!ImGui::GetIO().WantCaptureMouse)
-        camera.updateMouse(xPos, yPos, lastX, lastY);
-
-    lastX = xPos;
-    lastY = yPos;
 }

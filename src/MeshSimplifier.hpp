@@ -4,7 +4,7 @@
 
 #include <map>
 
-struct Edge
+struct VertexPair
 {
     uint32_t first;
     uint32_t second;
@@ -12,13 +12,29 @@ struct Edge
     float error;
     glm::mat4 qMat;
     glm::vec3 middle;
+
+    bool operator==(const VertexPair& other) const
+    {
+        return (first == other.first && second == other.second)
+            || (second == other.first && first == other.second);
+    }
 };
 
-struct EdgeComperator
+struct VertexPairHash
 {
-    bool operator()(const Edge& e1, const Edge& e2) const
+    size_t operator()(const VertexPair& p) const
     {
-        return (e2.error < e1.error);
+        size_t h1 = std::hash<uint32_t>{}(std::min(p.first, p.second));
+        size_t h2 = std::hash<uint32_t>{}(std::max(p.first, p.second));
+        return h1 ^ (h2 << 1);
+    }
+};
+
+struct VertexPairComp
+{
+    bool operator()(const VertexPair& p1, const VertexPair& p2) const
+    {
+        return (p2.error < p1.error);
     }
 };
 
@@ -29,9 +45,8 @@ private:
 
     std::vector<glm::vec3> vertices;
     std::vector<glm::mat4> errors;
-    std::vector<std::vector<uint32_t>> neighbors;
 
-    std::vector<Edge> edges;
+    std::vector<VertexPair> pairs;
 
 public:
     MeshSimplifier(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
@@ -47,11 +62,11 @@ public:
     size_t getVertexCount() const { return vertices.size(); }
     size_t getFaceCount() const { return indices.size() / 3; }
 
-    void printEdges();
+    void printPairs();
     void printFaces();
 
 private:
-    void setEdgeError(Edge& edge);
+    void setPairError(VertexPair& edge);
     glm::mat4 getQuadricError(uint32_t vertex);
 
     void updateIndices(uint32_t newVertex, uint32_t removedVertex);

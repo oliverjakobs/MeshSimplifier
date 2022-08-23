@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Ignis/Ignis.h>
+#include <imgui.h>
 #include <GLFW/glfw3.h>
 
 class GLFWApplication
@@ -17,6 +18,11 @@ public:
 
     void run();
 
-    virtual void update(float deltaTime) = 0;
-    virtual void render() = 0;
+    virtual void onResize(int width, int height) {}
+    virtual void onMouseButton(int button, int action) {}
+    virtual void onMouseMove(float xPos, float yPos) {}
+
+    virtual void onUpdate(float deltaTime) = 0;
+    virtual void onRender() = 0;
+    virtual void onRenderGui() {};
 };

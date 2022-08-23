@@ -28,15 +28,27 @@ glm
 
 \section*{Designentscheidungen}
 
-Kein Export zu .obj o.ä. - trivial, und ich würde im normalfall in ein Engine-Spezifisches Format exportieren
+Zuerst habe ich mir überlegt, was das Programm machen soll und was nicht. 
 
-Edges und Neighbor multimap - edges nur zum Speichern der Kantenkosten und zum Bestimmen der nächsten Kante zum entfernen
+Das Programm soll ein 3D-Model mit dem Format \emph{.obj} laden und anzeigen können. Dann soll über ein GUI ausgewählt werden können auf wie viele Faces das Mesh reduziert werden soll. Durch einen Button soll dann der Algorithmus mit den vorher festegelegtem Ziel ausgeführt werden. Außerdem soll es einen Button geben, der das Mesh auf seinen ursprünglichen Zustand zurücksetzt.
 
-Vertices nur Positionen - macht Algorithmus einfacher und übersichtlicher
+Als kleines Extra habe ich noch zwei Render-Optionen hinzugefügt, die mit Checkboxen ein- und ausgeschaltet werden können.
+
+Des Weiteren habe ich mich gegen den Export in ein Dateiformat entschieden, da es von der Komlexität eher trivial ist und ich im Normalfall in ein Engine-Spezifisches Format exportieren würde.
 
 Flat-Shading - ermöglicht Vertices mit nur Positionen, außerdem hebt das die Faces hervor
 
-Vertices werden nicht entfernt - Es werden nur die Indices verändert bzw. entfernt. Das Entfernen der Vertices würde ich erst beim exportieren machen
+Vertices nur Positionen - macht Algorithmus einfacher und übersichtlicher
+
+Ein Vertex hat eine Position, eine Fehler-Matrix und eine Liste an Nachbarn.
+
+Edges und Neighbors - edges nur zum Speichern der Kantenkosten und zum Bestimmen der nächsten Kante zum entfernen
+
+Die Edges werden in einem Heap gespeichert. 
+
+Neighbors werden nur bei initialisieren verwendet und müssen im Verlauf des Algorithmuses nicht mehr aktualisiert werden
+
+Vertices werden nicht entfernt - Es werden nur die Indices verändert bzw. entfernt. Das Entfernen der überflüssigen Vertices würde ich erst beim exportieren machen
 
 \section*{Bedienung}
 
