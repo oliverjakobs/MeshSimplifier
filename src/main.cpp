@@ -22,9 +22,11 @@ float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
 // mesh
-//MeshData data("res/Marsienne_Base.obj");
-MeshData data("res/monkey.obj");
-//MeshData data("res/cube.obj");
+const char* models[] = { "Marsienne_Base", "monkey", "cube" };
+std::string getModelPath(int i) { return "res/" + std::string(models[i]) + ".obj"; }
+
+int currentModel = 1;
+MeshData data(getModelPath(currentModel));
 
 class Application : public GLFWApplication
 {
@@ -80,12 +82,13 @@ public:
         model = glm::translate(model, objectPosition);
         ignisSetUniformMat4(&shader, "model", &model[0][0]);
 
-        // draw in wireframe
+        // enable/disable wireframe mode
         if (showWireframe)
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         else
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+        // enable/disable backface culling
         if (cullBackFaces)
         {
             glEnable(GL_CULL_FACE);
@@ -102,43 +105,68 @@ public:
 
     void onRenderGui()
     {
-        //ImGui::ShowDemoWindow(NULL);
+        // ImGui::ShowDemoWindow(NULL);
 
         ImGui::SetNextWindowPos(ImVec2(0, 0));
         ImGui::SetNextWindowSize(ImVec2(200, camera.getHeight()));
         ImGui::Begin("Info", NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-        ImGui::Text("Mesh info:");
-        ImGui::Text("Vertices: %d", simplifier->getVertexCount());
-        ImGui::Text("Faces:    %d", simplifier->getFaceCount());
-        ImGui::Separator();
-
-        ImGui::Text("Simplifier:");
-
-        ImGui::SliderInt("Target Faces", &targetFaces, 0, simplifier->getFaceCount());
-
-        if (ImGui::Button("Simplify"))
+        if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            simplifier->run(targetFaces);
-            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
-            targetFaces = simplifier->getFaceCount();
-            printf("Mesh simplified (%zd faces).\n", simplifier->getFaceCount());
+            ImGui::Text("Vertices: %d", simplifier->getVertexCount());
+            ImGui::Text("Faces:    %d", simplifier->getFaceCount());
+
+            ImGui::Text("Load model:");
+
+            ImGui::Combo("##model", &currentModel, models, IM_ARRAYSIZE(models));
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Load", ImVec2(-FLT_MIN, 0.0f)))
+            {
+                data = MeshData(getModelPath(currentModel));
+                simplifier->reload(data.vertices, data.indices);
+                delete mesh;
+                mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
+                targetFaces = simplifier->getFaceCount();
+            }
+
+            ImGui::Dummy(ImVec2(0.0f, 16.0f));
         }
 
-        if (ImGui::Button("Reset"))
+        if (ImGui::CollapsingHeader("Simplifier", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            simplifier->reload(data.vertices, data.indices);
-            mesh->reload(simplifier->getVertices(), simplifier->getIndices());
-            targetFaces = simplifier->getFaceCount();
-            printf("Mesh reset.\n");
+            ImGui::Text("Target Faces:");
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::SliderInt("##faces", &targetFaces, 0, simplifier->getFaceCount());
+
+            float buttonWidth = ImGui::GetContentRegionAvail().x * 0.5f;
+            if (ImGui::Button("Simplify", ImVec2(buttonWidth, 0.0f)))
+            {
+                simplifier->run(targetFaces);
+                mesh->reload(simplifier->getVertices(), simplifier->getIndices());
+                targetFaces = simplifier->getFaceCount();
+                printf("Mesh simplified (%zd faces).\n", simplifier->getFaceCount());
+            }
+
+            ImGui::SameLine();
+
+            if (ImGui::Button("Reset", ImVec2(-FLT_MIN, 0.0f)))
+            {
+                simplifier->reload(data.vertices, data.indices);
+                mesh->reload(simplifier->getVertices(), simplifier->getIndices());
+                targetFaces = simplifier->getFaceCount();
+                printf("Mesh reset.\n");
+            }
+
+            ImGui::Dummy(ImVec2(0.0f, 16.0f));
         }
 
-        ImGui::Separator();
-
-        ImGui::Text("Render settings:");
-
-        ImGui::Checkbox("Wireframe", &showWireframe);
-        ImGui::Checkbox("Cull Backfaces", &cullBackFaces);
+        if (ImGui::CollapsingHeader("Render settings", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Checkbox("Wireframe", &showWireframe);
+            ImGui::Checkbox("Cull Backfaces", &cullBackFaces);
+        }
 
         ImGui::End();
     }

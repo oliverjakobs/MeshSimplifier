@@ -31,7 +31,7 @@ public:
     glm::vec3 getPosition() const { return eye; }
     glm::mat4 getViewMatrix() const { return viewMat; }
     glm::vec2 getScreenSize() const { return screenSize; }
-    float getAspectRatio() const { return screenSize.x / screenSize.y; }
+    float getAspectRatio() const { return screenSize.y != 0.0f ? screenSize.x / screenSize.y : screenSize.x; }
 
     float getWidth() const { return screenSize.x; }
     float getHeight() const { return screenSize.y; }
