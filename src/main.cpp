@@ -40,7 +40,7 @@ private:
     bool cullBackFaces = false;
     int targetFaces = 0;
 public:
-    Application() : GLFWApplication("Application", SCR_WIDTH, SCR_HEIGHT, true)
+    Application() : GLFWApplication("Mesh Simplifier", SCR_WIDTH, SCR_HEIGHT, true)
     {
         camera.setScreenSize((float)SCR_WIDTH, (float)SCR_HEIGHT);
 

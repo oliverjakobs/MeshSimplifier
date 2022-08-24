@@ -1,6 +1,6 @@
-workspace "Model"
+workspace "MeshSimplifier"
     architecture "x64"
-    startproject "Model"
+    startproject "MeshSimplifier"
 
     configurations
     {
@@ -34,7 +34,7 @@ include "packages/imgui.lua"
 
 group ""
 
-project "Model"
+project "MeshSimplifier"
     kind "ConsoleApp"
     language "C++"
     staticruntime "On"
