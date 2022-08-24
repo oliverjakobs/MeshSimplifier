@@ -41,13 +41,15 @@ Meine Designentscheidungen unterteile ich in zwei Abschnitte. Im ersten Abschnit
 
 \subsection*{Allgemeine Entscheidungen}
 
+Bevor ich mir Gedanken gemacht habe, wie ich den eigentlichen Algorithmus implementiere, habe ich mir überlegt, was das Programm können soll und was nicht. 
+
+Das Programm soll ein 3D-Model mit dem Format \texttt{.obj} laden und anzeigen können. Dann soll über ein GUI ausgewählt werden können auf wie viele Faces das Mesh reduziert werden soll. Durch einen Button soll dann der Algorithmus mit den vorher festegelegtem Ziel ausgeführt werden. Außerdem soll es einen Button geben, der das Mesh auf seinen ursprünglichen Zustand zurücksetzt.
+
 In dem im ersten Abschnitt erwähnten Paper werden die beiden Vertices für den Edge-Collapse 
 
 Zu Beginn habe ich mir Gedanken 
 
 Zuerst habe ich mir überlegt, was das Programm machen soll und was nicht. 
-
-Das Programm soll ein 3D-Model mit dem Format \texttt{.obj} laden und anzeigen können. Dann soll über ein GUI ausgewählt werden können auf wie viele Faces das Mesh reduziert werden soll. Durch einen Button soll dann der Algorithmus mit den vorher festegelegtem Ziel ausgeführt werden. Außerdem soll es einen Button geben, der das Mesh auf seinen ursprünglichen Zustand zurücksetzt.
 
 Als kleines Extra habe ich noch zwei Render-Optionen hinzugefügt, die mit Checkboxen ein- und ausgeschaltet werden können.
 
@@ -59,17 +61,41 @@ Außerdem können beim Flat-Shading die Face-Normals im Fragment-Shader berechne
 
 \subsection*{Entscheidungen zur Algorithmus Implementation}
 
-Ein Vertex hat eine Position und eine Fehler-Matrix und da in meiner Implementation ein .
+In dem Paper wird das Mesh vereinfacht, indem aus einer Liste aus allen möglichen Paaren das bestmöglichste Paar ausgewählt wird. Dabei ist es nicht nötig, dass zwischen den beiden Verices eines Paares auch eine Kante existiert, solange die Distanz zwischen den Vertices einen festgelegten Threshold nicht überschreitet. 
+Um den Umfang von meinem Projekt nicht zu groß werden zu lassen, habe ich mich entschieden diesen Threshold auf Null zu setzen und nur Paare zuzulassen, zwischen dessen Vertices auch eine Kante existiert. 
+
+Für den von mir gewählten Algorithmus braucht ein Vertex eine Position und eine Fehler-Matrix. 
+Das realisiere ich durch zwei Vektoren (einen für die Positionen und einen für die Fehler-Matrizen), indem ich den Vertex durch einen Index darstelle. 
+Um jetzt an die Position eines Vertex \emph{v} zu gelangen, muss nur der \emph{v}-te Eintrag in den Vector der Positionen ausgelesen werden. Für die Fehler-Matrix eines Vertex funktioniert das analog.
 
 Pairs - Stellt alle Paare an vertices da, die zu einem neuen Vertex zusammengefasst werden können. 
 
-Die Pairs werden in einem Heap gespeichert.
+Bei erstellen dieser Paare verwende ich ein \texttt{std::unordered\textunderscore set} um Duplikate zu verhindern.
+Dabei sind zwei Paare $a$ und $b$ identisch, wenn $(a.first=b.first \land a.second=b.second) \lor (a.second=b.first \land a.first=b.second)$. 
+
+Die Paare werden (mit \texttt{std::make\textunderscore heap}) in einem Min Heap verwaltet, wobei die Sortierung anhand des Fehlers erfolgt.
 
 Vertices werden nicht entfernt - Es werden nur die Indices verändert bzw. entfernt. Das Entfernen der überflüssigen Vertices würde ich erst beim exportieren machen
 
 \section*{Bedienung}
 
+Im ersten Abschnitt des GUIs (\emph{Mesh}) werden die Anzahl der Vertices und der Faces angezeigt. Außerdem können hier die verfügbaren Meshes ausgewählt und geladen werden. Zu Verfügung stehen ein einfacher Würfel (8 Vertices, 12 Faces), ein Affenkopf (2012 Vertices, 3936 Faces) und die Marsienne Base (13235 Vertices, 27894 Faces) aus Übung03.
+
+Der zweite Abschnitt ist die Bedienung des Simplifiers. Hier kann mit einem Slider die gewünschte Anzahl an Faces ausgewählt werden (der Slider geht von 0 bis zur Anzahl der Faces der aktuellen Version des Meshes). Mit dem Button \texttt{Simplify} wird das Mesh so lange vereinfacht, bis die gewünschte Anzahl an Faces erreicht wurde. Mit dem Button \texttt{Reset} wird die ursprüngliche Version des Meshes wieder hergestellt.
+
+Im letzten Abschnitt befinden sich zwei Render-Optionen mit denen der Wireframe-Modus ein- und ausgeschaltet bzw. das Backface Culling aktiviert und deaktiviert werden kann.
+
+Mit Hilfe der Maus kann die Kamera auf einem Arcball um das Mesh bewegt werden.
+
+Mit \texttt{Esc} kann das Programm beendet werden.
+
 \section*{Build}
+
+Zur Project Generation benutze ich Premake (\url{https://premake.github.io/}). Ich habe die entsprechenden Scripts meiner Abgabe beigefügt.
+Falls also Probleme mit der VisualStudio Solution autreten sollten,
+kann mit dem folgenden Befehl das Projekt neu generiert werden und so die Probleme hoffentlich gelöst werden:
+\[\texttt{.\textbackslash premake\textbackslash premake5.exe [action]}\]
+Für mein Projekt habe ich \texttt{vs2019} als \texttt{action} verwendet. Andere Möglichkeiten sind hier \url{https://premake.github.io/docs/Using-Premake} aufgelistet.
 
 
 \end{document}

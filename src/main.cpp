@@ -116,6 +116,8 @@ public:
             ImGui::Text("Vertices: %d", simplifier->getVertexCount());
             ImGui::Text("Faces:    %d", simplifier->getFaceCount());
 
+            ImGui::Separator();
+
             ImGui::Text("Load model:");
 
             ImGui::Combo("##model", &currentModel, models, IM_ARRAYSIZE(models));
@@ -198,10 +200,8 @@ public:
 
 int main()
 {
-    Application* app = new Application();
+    Application app;
+    app.run();
 
-    app->run();
-
-    delete app;
     return 0;
 }
