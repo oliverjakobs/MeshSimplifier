@@ -9,7 +9,7 @@ struct VertexPair
     uint32_t first;
     uint32_t second;
 
-    float error;
+    float cost;
     glm::mat4 qMat;
     glm::vec3 middle;
 
@@ -34,7 +34,7 @@ struct VertexPairComp
 {
     bool operator()(const VertexPair& p1, const VertexPair& p2) const
     {
-        return (p2.error < p1.error);
+        return (p2.cost < p1.cost);
     }
 };
 
@@ -43,17 +43,21 @@ class MeshSimplifier
 private:
     std::vector<uint32_t> indices;
 
+    // vertex data
     std::vector<glm::vec3> vertices;
     std::vector<glm::mat4> errors;
 
+    // min heap of all valid pairs
     std::vector<VertexPair> pairs;
 
 public:
     MeshSimplifier(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
     ~MeshSimplifier();
 
-    void reload(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
+    // prepare the algorithm (calculate errors and create pairs)
+    void setup(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
 
+    // run the algorithm until the face count is less than or equal to targetFaces
     void run(size_t targetFaces);
     
     std::vector<glm::vec3> getVertices() const { return vertices; }
@@ -62,12 +66,20 @@ public:
     size_t getVertexCount() const { return vertices.size(); }
     size_t getFaceCount() const { return indices.size() / 3; }
 
+    // debug print functions
     void printPairs();
     void printFaces();
 
 private:
-    void setPairError(VertexPair& edge);
+    // create all valid pairs
+    void createValidPairs();
+
+    // set the cost, qMat and middle for the edge
+    void setPairCost(VertexPair& edge);
+
+    // calculate the quadric error matrix for the given vertex
     glm::mat4 getQuadricError(uint32_t vertex);
 
-    void updateIndices(uint32_t newVertex, uint32_t removedVertex);
+    // remove removedVertex (or replace it with newVertex) and repair the mesh afterwards
+    void removeVertex(uint32_t newVertex, uint32_t removedVertex);
 };

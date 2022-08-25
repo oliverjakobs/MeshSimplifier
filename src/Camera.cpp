@@ -1,8 +1,9 @@
 #include "Camera.hpp"
 
-Camera::Camera(glm::vec3 eye, glm::vec3 lookat, glm::vec3 up)
+Camera::Camera(glm::vec3 eye, glm::vec2 screen, glm::vec3 lookat, glm::vec3 up)
 {
     setView(eye, lookat, up);
+    setScreenSize(screen);
 }
 
 void Camera::setView(glm::vec3 eye, glm::vec3 lookat, glm::vec3 up)
@@ -13,10 +14,9 @@ void Camera::setView(glm::vec3 eye, glm::vec3 lookat, glm::vec3 up)
     updateViewMatrix();
 }
 
-void Camera::setScreenSize(float width, float height)
+void Camera::setScreenSize(glm::vec2 size)
 {
-    screenSize.x = width;
-    screenSize.y = height;
+    screen = size;
 }
 
 void Camera::updateViewMatrix() { viewMat = glm::lookAt(eye, lookAt, up); }
@@ -30,8 +30,8 @@ void Camera::updateMouse(float x, float y, float lastX, float lastY)
     glm::vec4 pivot(lookAt.x, lookAt.y, lookAt.z, 1);
 
     // step 1 : Calculate the amount of rotation given the mouse movement.
-    float deltaAngleX = (glm::two_pi<float>() / screenSize.x); // a movement from left to right = 2*PI = 360 deg
-    float deltaAngleY = (glm::pi<float>() / screenSize.y);  // a movement from top to bottom = PI = 180 deg
+    float deltaAngleX = (glm::two_pi<float>() / screen.x); // a movement from left to right = 2*PI = 360 deg
+    float deltaAngleY = (glm::pi<float>() / screen.y);  // a movement from top to bottom = PI = 180 deg
     float xAngle = (lastX - x) * deltaAngleX;
     float yAngle = (lastY - y) * deltaAngleY;
 

@@ -6,12 +6,7 @@
 #include <Ignis/Ignis.h>
 #include <glm/glm.hpp>
 
-struct HalfEdge
-{
-    uint32_t vert;
-    uint32_t twin;
-};
-
+// struct to load an .obj file into two vectors
 struct MeshData
 {
     std::vector<glm::vec3> vertices;
@@ -21,6 +16,7 @@ struct MeshData
     ~MeshData();
 };
 
+// class for creating an vertex array for a mesh and rendering it
 class Mesh
 {
 private:
@@ -30,8 +26,10 @@ public:
     Mesh(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
     ~Mesh();
 
-    void reload(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
+    // write new data into the buffers (can resize them)
+    void recreate(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices);
 
+    // render the mesh
     void render();
 };
 

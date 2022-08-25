@@ -17,7 +17,7 @@ glm::vec3 cameraPosition(0.0f, 0.0f, 5.0f);
 glm::vec3 objectPosition(0.0f);
 
 // camera
-Camera camera(cameraPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+Camera camera(cameraPosition, glm::vec2((float)SCR_WIDTH, (float)SCR_HEIGHT));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 
@@ -33,30 +33,25 @@ class Application : public GLFWApplication
 private:
     IgnisShader shader;
 
-    Mesh* mesh;
-    MeshSimplifier* simplifier;
+    Mesh mesh;
+    MeshSimplifier simplifier;
 
     bool showWireframe = false;
     bool cullBackFaces = false;
     int targetFaces = 0;
 public:
-    Application() : GLFWApplication("Mesh Simplifier", SCR_WIDTH, SCR_HEIGHT, true)
+    Application() :
+        GLFWApplication("Mesh Simplifier", SCR_WIDTH, SCR_HEIGHT, true), 
+        simplifier(data.vertices, data.indices), 
+        mesh(data.vertices, data.indices)
     {
-        camera.setScreenSize((float)SCR_WIDTH, (float)SCR_HEIGHT);
-
         ignisCreateShadervf(&shader, "res/shaders/shader.vert", "res/shaders/shader.frag");
 
-        simplifier = new MeshSimplifier(data.vertices, data.indices);
-        mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
-
-        targetFaces = simplifier->getFaceCount();
+        targetFaces = simplifier.getFaceCount();
     }
 
     ~Application()
     {
-        delete mesh;
-        delete simplifier;
-
         ignisDeleteShader(&shader);
     }
 
@@ -66,6 +61,7 @@ public:
             glfwSetWindowShouldClose(window, true);
     }
 
+    // rendering of the mesh
     void onRender()
     {
         ignisUseShader(&shader);
@@ -100,9 +96,10 @@ public:
         }
 
         // render the cube
-        mesh->render();
+        mesh.render();
     }
 
+    // gui rendering
     void onRenderGui()
     {
         // ImGui::ShowDemoWindow(NULL);
@@ -113,8 +110,8 @@ public:
 
         if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            ImGui::Text("Vertices: %d", simplifier->getVertexCount());
-            ImGui::Text("Faces:    %d", simplifier->getFaceCount());
+            ImGui::Text("Vertices: %d", simplifier.getVertexCount());
+            ImGui::Text("Faces:    %d", simplifier.getFaceCount());
 
             ImGui::Separator();
 
@@ -127,10 +124,9 @@ public:
             if (ImGui::Button("Load", ImVec2(-FLT_MIN, 0.0f)))
             {
                 data = MeshData(getModelPath(currentModel));
-                simplifier->reload(data.vertices, data.indices);
-                delete mesh;
-                mesh = new Mesh(simplifier->getVertices(), simplifier->getIndices());
-                targetFaces = simplifier->getFaceCount();
+                simplifier.setup(data.vertices, data.indices);
+                mesh.recreate(simplifier.getVertices(), simplifier.getIndices());
+                targetFaces = simplifier.getFaceCount();
             }
 
             ImGui::Dummy(ImVec2(0.0f, 16.0f));
@@ -140,24 +136,24 @@ public:
         {
             ImGui::Text("Target Faces:");
             ImGui::SetNextItemWidth(-FLT_MIN);
-            ImGui::SliderInt("##faces", &targetFaces, 0, simplifier->getFaceCount());
+            ImGui::SliderInt("##faces", &targetFaces, 0, simplifier.getFaceCount());
 
             float buttonWidth = ImGui::GetContentRegionAvail().x * 0.5f;
             if (ImGui::Button("Simplify", ImVec2(buttonWidth, 0.0f)))
             {
-                simplifier->run(targetFaces);
-                mesh->reload(simplifier->getVertices(), simplifier->getIndices());
-                targetFaces = simplifier->getFaceCount();
-                printf("Mesh simplified (%zd faces).\n", simplifier->getFaceCount());
+                simplifier.run(targetFaces);
+                mesh.recreate(simplifier.getVertices(), simplifier.getIndices());
+                targetFaces = simplifier.getFaceCount();
+                printf("Mesh simplified (%zd faces).\n", simplifier.getFaceCount());
             }
 
             ImGui::SameLine();
 
             if (ImGui::Button("Reset", ImVec2(-FLT_MIN, 0.0f)))
             {
-                simplifier->reload(data.vertices, data.indices);
-                mesh->reload(simplifier->getVertices(), simplifier->getIndices());
-                targetFaces = simplifier->getFaceCount();
+                simplifier.setup(data.vertices, data.indices);
+                mesh.recreate(simplifier.getVertices(), simplifier.getIndices());
+                targetFaces = simplifier.getFaceCount();
                 printf("Mesh reset.\n");
             }
 
@@ -176,7 +172,7 @@ public:
     void onResize(int width, int height)
     {
         glViewport(0, 0, width, height);
-        camera.setScreenSize((float)width, (float)height);
+        camera.setScreenSize(glm::vec2((float)width, (float)height));
     }
 
     void onMouseButton(int button, int action)

@@ -5,14 +5,12 @@
 
 MeshSimplifier::MeshSimplifier(std::vector<glm::vec3> vertices, std::vector<uint32_t> indices)
 {
-    reload(vertices, indices);
+    setup(vertices, indices);
 }
 
-MeshSimplifier::~MeshSimplifier()
-{
-}
+MeshSimplifier::~MeshSimplifier() { }
 
-void MeshSimplifier::reload(std::vector<glm::vec3> v, std::vector<uint32_t> i)
+void MeshSimplifier::setup(std::vector<glm::vec3> v, std::vector<uint32_t> i)
 {
     vertices = v;
     indices = i;
@@ -23,24 +21,11 @@ void MeshSimplifier::reload(std::vector<glm::vec3> v, std::vector<uint32_t> i)
         errors.push_back(getQuadricError(i));
 
     // create all valid pairs
-    std::unordered_set<VertexPair, VertexPairHash> pairSet;
-    for (size_t i = 0; i < indices.size(); i += 3)
-    {
-        uint32_t v0 = indices[i];
-        uint32_t v1 = indices[i + 1];
-        uint32_t v2 = indices[i + 2];
-
-        pairSet.insert({ v0, v1 });
-        pairSet.insert({ v1, v2 });
-        pairSet.insert({ v2, v0 });
-    }
-
-    // convert pairs to a vector
-    pairs = std::vector<VertexPair>(pairSet.begin(), pairSet.end());
+    createValidPairs();
 
     // set the error for each pair
     for (auto& p : pairs)
-        setPairError(p);
+        setPairCost(p);
 
     std::make_heap(pairs.begin(), pairs.end(), VertexPairComp());
 }
@@ -49,7 +34,7 @@ void MeshSimplifier::run(size_t targetFaces)
 {
     while (getFaceCount() > targetFaces)
     {
-        // remove the edge with minimal error
+        // get and remove the edge with minimal error
         std::pop_heap(pairs.begin(), pairs.end(), VertexPairComp());
         VertexPair removedPair = pairs.back();
         pairs.pop_back();
@@ -61,19 +46,39 @@ void MeshSimplifier::run(size_t targetFaces)
         errors[newVertex] = removedPair.qMat;
         vertices[newVertex] = removedPair.middle;
 
-        // update faces and pairs
-        updateIndices(newVertex, removedVertex);
+        // replace removedVertex with newVertex
+        removeVertex(newVertex, removedVertex);
 
         // update heap
         std::make_heap(pairs.begin(), pairs.end(), VertexPairComp());
     }
 }
 
-void MeshSimplifier::setPairError(VertexPair& p)
+void MeshSimplifier::createValidPairs()
+{
+    // insert all valid pairs into set to prevent duplicates
+    std::unordered_set<VertexPair, VertexPairHash> pairSet;
+    for (size_t i = 0; i < indices.size(); i += 3)
+    {
+        uint32_t v0 = indices[i];
+        uint32_t v1 = indices[i + 1];
+        uint32_t v2 = indices[i + 2];
+
+        // every edge in the mesh is a valid pair
+        pairSet.insert({ v0, v1 });
+        pairSet.insert({ v1, v2 });
+        pairSet.insert({ v2, v0 });
+    }
+
+    // convert set to a vector
+    pairs = std::vector<VertexPair>(pairSet.begin(), pairSet.end());
+}
+
+void MeshSimplifier::setPairCost(VertexPair& p)
 {
     p.qMat = errors[p.first] + errors[p.second];
     p.middle = (vertices[p.first] + vertices[p.second]) / 2.0f;
-    p.error = glm::dot(glm::vec4(p.middle, 1.0f), p.qMat * glm::vec4(p.middle, 1.0f));
+    p.cost = glm::dot(glm::vec4(p.middle, 1.0f), p.qMat * glm::vec4(p.middle, 1.0f));
 }
 
 glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
@@ -83,20 +88,19 @@ glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
     // find all faces of 'vertex' and add it's error to qMat.
     for (size_t i = 0; i < indices.size(); i += 3)
     {
-        uint32_t v0 = indices[i];       // first vertex of the current face.
-        uint32_t v1 = indices[i + 1];   // second vertex of the current face.
-        uint32_t v2 = indices[i + 2];   // third vertex of the current face.
+        uint32_t v0 = indices[i];       // first vertex of the current face
+        uint32_t v1 = indices[i + 1];   // second vertex of the current face
+        uint32_t v2 = indices[i + 2];   // third vertex of the current face
 
-        // vertex is not part of this face
+        // check if vertex is part of the current face or not
         if (vertex != v0 && vertex != v1 && vertex != v2) continue;
 
-        // Calc cross prod.
         glm::vec3 p1 = vertices[v1] - vertices[v0];
         glm::vec3 p2 = vertices[v2] - vertices[v0];
         glm::vec3 n = glm::normalize(glm::cross(p2, p1));
         glm::vec4 v_tag = glm::vec4(n, -(glm::dot(vertices[vertex], n)));
 
-        // calc error matrix
+        // add error to matrix
         for (int i = 0; i < 4; ++i)
             for (int j = 0; j < 4; ++j)
                 qMat[i][j] += v_tag[i] * v_tag[j];
@@ -105,16 +109,16 @@ glm::mat4 MeshSimplifier::getQuadricError(uint32_t vertex)
     return qMat;
 }
 
-void MeshSimplifier::updateIndices(uint32_t newVertex, uint32_t removedVertex)
+void MeshSimplifier::removeVertex(uint32_t newVertex, uint32_t removedVertex)
 {
     // remove all invalid pairs and and faces
     for (size_t i = 0; i < indices.size(); )
     {
-        uint32_t v0 = indices[i];       // First vertex of the current face.
-        uint32_t v1 = indices[i + 1];   // Second vertex of the current face.
-        uint32_t v2 = indices[i + 2];   // Third vertex of the current face.
+        uint32_t v0 = indices[i];       // first vertex of the current face
+        uint32_t v1 = indices[i + 1];   // second vertex of the current face
+        uint32_t v2 = indices[i + 2];   // third vertex of the current face
 
-        // if the current face contains one of the given indices
+        // check if the current face contains one of the given indices
         if ((newVertex == v0 || newVertex == v1 || newVertex == v2)
             && (removedVertex == v0 || removedVertex == v1 || removedVertex == v2))
         {
@@ -137,27 +141,24 @@ void MeshSimplifier::updateIndices(uint32_t newVertex, uint32_t removedVertex)
         }
     }
 
-    // Update indices that all indices that were of the removed index and set to the newly combined vertex.
+    // change all occurances of removedVertex to newVertex
     for (auto& index : indices)
     {
         if (index == removedVertex)
             index = newVertex;
     }
 
-    // Update edges, so any edge that was connected to the removed edge has it's error recalculated 
-    // and is only connected to the remaining vertex.
-    for (auto it = pairs.begin(); it != pairs.end();)
+    for (auto it = pairs.begin(); it != pairs.end(); ++it)
     {
+        // if the pair cointains the removedVertex change it to newVertex
         if (it->second == removedVertex)
             it->second = newVertex;
         else if (it->first == removedVertex)
             it->first = newVertex;
 
-        // recalculate edge error
+        // recalculate pair cost
         if (it->first == newVertex || it->second == newVertex)
-            setPairError(*it);
-
-        ++it;
+            setPairCost(*it);
     }
 }
 
@@ -166,16 +167,12 @@ void MeshSimplifier::printPairs()
 {
     printf("Pairs: (%zd)\n", pairs.size());
     for (auto& e : pairs)
-    {
-        printf(" - (%d, %d) error=%f\n", e.first, e.second, e.error);
-    }
+        printf(" - (%d, %d) error=%f\n", e.first, e.second, e.cost);
 }
 
 void MeshSimplifier::printFaces()
 {
     printf("Faces: (%zd)\n", indices.size() / 3);
     for (size_t i = 0; i < indices.size(); i += 3)
-    {
         printf("[%d, %d, %d]\n", indices[i], indices[i + 1], indices[i + 2]);
-    }
 }
