@@ -63,7 +63,7 @@ Wenn ein Vertex also einfach nur ein \texttt{vec3} ist, wird das Laden des Meshe
 Für den von mir gewählten Algorithmus muss einem Vertex eine Position und eine Fehler-Matrix zugeordnet werden können.
 Das realisiere ich durch zwei Vektoren (einen für die Positionen und einen für die Fehler-Matrizen), indem ich den Vertex durch einen Index darstelle.
 
-Um jetzt an die Position eines Vertex \emph{v} zu gelangen, muss nur der \emph{v}-te Eintrag in den Vector der Positionen ausgelesen werden. Für die Fehler-Matrix eines Vertex funktioniert das analog.
+Um jetzt an die Position eines Vertex \emph{v} zu gelangen, muss nur der \emph{v}-te Eintrag aus dem Vektor der Positionen ausgelesen werden. Für die Fehler-Matrix eines Vertex funktioniert das analog.
 
 Der Grund warum ich mich für diese Darstellung der Daten entschieden hab ist, weil ich dadruch den geringsten Aufwand bei der Ein- und Ausgabe in bzw. aus dem Algorithmus habe. 
 Ich will nicht die Positionen in Vertices mit Fehler-Matrizen umrechnen, oder die Fehler-Matrizen außerhalb des Algorithmus mit rumschleppen müssen.
@@ -83,21 +83,22 @@ Schritte eins bis vier erfolgen in der Funktion \texttt{setup(vertices, indices)
 
 Schritt fünf wird in der Funktion \texttt{run(targetFaces)} in einer Schleife solange ausgeführt bis die angegebene Anzahl an Faces erreicht ist.
 
-\myparagraph{Vertex Paare}
+\myparagraph{Erstellen der Vertex Paare}
 Bei dem Berechnen aller möglichen Paare ist es in dem Paper nicht notwendig, dass zwischen den beiden Verices eines Paares auch eine Kante existiert, solange die Distanz zwischen den Vertices einen festgelegten Threshold nicht überschreitet. 
 Dadurch ist der Algorithmus vielseitiger anwendbar.
-Für meine Implementation habe ich mich dennoch dafür entschieden diesen Threshold auf Null zu setzen und nur Paare zuzulassen, zwischen dessen Vertices auch eine Kante existiert, da dadurch der Umfang von meinem Projekt überschaubar bleibt.
-
-Beim Erstellen dieser Paare verwende ich ein temporäres \texttt{std::unordered\textunderscore set} um Duplikate zu verhindern.
+Für meine Implementation habe ich mich aber dafür entschieden diesen Threshold auf Null zu setzen und dadurch nur Paare zuzulassen, zwischen dessen Vertices auch eine Kante existiert, da so der Umfang von meinem Projekt überschaubarer bleibt.
+\\
+\\
+Um beim Erstellen dieser Paare Duplikate zu verhindern, verwende ich ein temporäres \texttt{std::unordered\textunderscore set}.
 Dabei sind zwei Paare $a$ und $b$ identisch, wenn:
 $$(a.first=b.first \land a.second=b.second) \lor (a.second=b.first \land a.first=b.second)$$
 
-Nachdem das Set erstellt wurde, wandle ich es in einen \texttt{std::vector} um.
+Nachdem das Set gefüllt wurde, wandle ich es in einen \texttt{std::vector} um.
 Das ist meiner Meinung nach die eleganteste Möglichkeit einen Vektor zu erstellen, in dem es keine Duplikate gibt (vorausgesetzt es werden alle Elemente aufeinmal hinzugefügt).
 
 \myparagraph{Auswahl des nächsten Paares}
 Wie vorher schon erwähnt werden die Paare (mit \texttt{std::make\textunderscore heap}) in einem Min Heap verwaltet. 
-Dadurch ist es möglich mit \texttt{std::pop\textunderscore heap} ein günstigstes Paar zu entfernen und zusammen zu fassen. 
+Dadurch ist es möglich mit \texttt{std::pop\textunderscore heap} ein günstigstes Paar zu entfernen und zu einem neuen Vertex zusammen zu fassen. 
 
 \myparagraph{Veränderung der Vertices}
 Für jedes Paar, das vereint wird, wird einer der beiden Vertices verändert.
@@ -108,10 +109,11 @@ Das wirkliche entfernen der überflüssigen Vertices würde ich erst beim export
 \newpage
 \section*{Bedienung}
 
-Um das Programm zu starten muss die Datei \texttt{MeshSimplifier.exe} ausgeführt werden. Dafür wird auch der gesammte Inhalt des Orderns \texttt{./res/} benötigt.
+Um das Programm zu starten muss die Datei \texttt{MeshSimplifier.exe} ausgeführt werden. Dafür wird neben der \texttt{.exe} auch der gesammte Inhalt des Orderns \texttt{./res/} benötigt.
 \\
 \\
-Im ersten Abschnitt des GUIs (A) werden die Anzahl der Vertices und der Faces angezeigt. 
+Im ersten Abschnitt des GUIs (A) werden die Anzahl der Vertices und der Faces angezeigt (Da in meiner Implementation nicht mehr benötigte Vertices nicht entfernt werden, wird sich die Anzahl der Vertices bei einer Vereinfachung des Meshes nicht verändern).
+
 Außerdem können hier die verfügbaren Meshes ausgewählt und geladen werden (B). Zu Verfügung stehen ein einfacher Würfel (8 Vertices, 12 Faces), ein Affenkopf (2012 Vertices, 3936 Faces) und die Marsienne Base (13235 Vertices, 27894 Faces) aus Übung03.
 \\
 \\
@@ -136,13 +138,14 @@ In diesem Projekt verwende ich vier bzw. fünf Bibliotheken, die es mir ermögli
 
 \begin{itemize}
 	\item \textbf{GLFW (\url{https://www.glfw.org/}):}
-	GLFW ist eine Bibliothek, die es ermöglicht ein Fenster mit OpenGL-Kontext zu erstellen un die Eingabe mit Maus und Tastatur ermöglicht.
+	GLFW ist eine Bibliothek, die es ermöglicht ein Fenster mit OpenGL-Kontext zu erstellen. 
+	Außerdem wird durch diese Bibliothek die Eingabe mit Maus und Tastatur ermöglicht.
 	Ich habe mich dafür entschieden, da ich damit die meiste Erfahrung habe und gut damit klar komme.
 	\item \textbf{Ignis (\url{https://github.com/oliverjakobs/Ignis}):}
 	Ignis ist ein von mir selbst entwickeltes Framework, das mir für meine Projekte den Umgang mit OpenGL vereinfachen soll. 
-	Mit Ignis kann ich einfacher OpenGL Objekte wie Shader oder VertexArrays erstellen.
+	Mit Ignis kann ich mit wenig Aufwand OpenGL-Objekte wie Shader oder Vertex-Arrays erstellen.
 	\item \textbf{GLAD (\url{https://glad.dav1d.de/}):} 
-	Glad ist eine OpenGL-Loading-Library und wird von Ignis eingebunden.
+	Glad ist eine OpenGL-Loading-Library und ist in Ignis integriert.
 	\item \textbf{Dear ImGui (\url{https://github.com/ocornut/imgui}):}
 	Dear ImGui ist eine eine Bibliothek zum Erstellen von Grafischen Benutzeroberflächen basierend auf dem \emph{Immediate Mode GUI} Paradigma.
 	Durch Dear ImGui kann ich meiner Anwendung eine grafische Benutzeroberfläche geben, und somit die Bedienung vereinfachen.
